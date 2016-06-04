@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/boltdb/bolt"
 	"github.com/bot-api/telegram"
 	"github.com/bot-api/telegram/telebot"
@@ -27,27 +26,21 @@ func main() {
 		if update.Message == nil {
 			return nil
 		}
+		city, error := getCity(update.Message.Text)
 
-		textMessage := "No selected city. Select city with command /city {cityName}"
+		if error != "" {
+			_, err := api.SendMessage(ctx,
+				telegram.NewMessagef(update.Chat().ID, error))
+			return err
+		}
 
-		boltStorage.DB.View(func(tx *bolt.Tx) error {
-			b := tx.Bucket([]byte("users"))
-			v := b.Get([]byte(strconv.FormatInt(update.From().ID, 10)))
-			if v != nil {
-				fmt.Printf("The answer is: %s\n", v)
-				textMessage = getStations(string(v))
-			}
-			return nil
-		})
-
+		textMessage := getStations(city)
 		api := telebot.GetAPI(ctx) // take api from context
 		msg := telegram.NewMessage(update.Chat().ID, textMessage)
 		_, err := api.Send(ctx, msg)
-
 		return err
 
 	})
-
 	// Use command middleware, that helps to work with commands
 	bot.Use(telebot.Commands(map[string]telebot.Commander{
 		"start": telebot.CommandFunc(
@@ -59,6 +52,37 @@ func main() {
 					telegram.NewMessagef(update.Chat().ID,
 						"received start with arg %s", arg,
 					))
+
+				return err
+			}),
+		"current": telebot.CommandFunc(
+			func(ctx context.Context, arg string) error {
+				update := telebot.GetUpdate(ctx)
+				textMessage := "No selected city. Select city with command \n/city {cityName}"
+
+				boltStorage.DB.View(func(tx *bolt.Tx) error {
+					b := tx.Bucket([]byte("users"))
+					v := b.Get([]byte(strconv.FormatInt(update.From().ID, 10)))
+					if v != nil {
+						textMessage = getStations(string(v))
+					}
+					return nil
+				})
+
+				api := telebot.GetAPI(ctx) // take api from context
+				msg := telegram.NewMessage(update.Chat().ID, textMessage)
+				_, err := api.Send(ctx, msg)
+				return err
+			}),
+		"help": telebot.CommandFunc(
+			func(ctx context.Context, arg string) error {
+
+				api := telebot.GetAPI(ctx)
+				update := telebot.GetUpdate(ctx)
+				_, err := api.SendMessage(ctx,
+					telegram.NewMessagef(update.Chat().ID,
+						"It's Ngs weather bot. \nIt can show you weather in city. To start messaging, you can send city name in your message.\nCommands:\n/city {cityName} - set your prefered city to show by /curent command\n/current - show's the weather in prefered city by /city command\n/forecast - show's forecast by prefered city/help",
+					))
 				return err
 			}),
 		"city": telebot.CommandFunc(
@@ -67,7 +91,6 @@ func main() {
 				api := telebot.GetAPI(ctx)
 				update := telebot.GetUpdate(ctx)
 				user := update.From()
-				log.Printf("UUUUUUUUUUUUSER %i %s %s", user.ID, user.FirstName, user.LastName)
 
 				city, error := getCities(arg)
 
@@ -77,13 +100,26 @@ func main() {
 					return err
 				}
 
-				boltStorage.writerChan <- [3]interface{}{"users", strconv.FormatInt(user.ID, 10), []byte(city)}
+				if len(city.Cities) > 1 {
+					textMessage := "Please, set city:\n"
+					for index := range city.Cities {
+						log.Println(index)
+						log.Println(city.Cities[index].Alias)
+						textMessage += "/city " + city.Cities[index].Alias + "\n"
+					}
+					api.SendMessage(ctx,
+						telegram.NewMessagef(update.Chat().ID,
+							textMessage,
+						))
+					return nil
+				}
 
-				_, err := api.SendMessage(ctx,
+				boltStorage.writerChan <- [3]interface{}{"users", strconv.FormatInt(user.ID, 10), []byte(city.Cities[0].Alias)}
+				api.SendMessage(ctx,
 					telegram.NewMessagef(update.Chat().ID,
-						"received test with arg %s", city,
+						"City selected: %s", city.Cities[0].Title,
 					))
-				return err
+				return nil
 			}),
 	}))
 
@@ -93,7 +129,7 @@ func main() {
 	}
 }
 
-func getCities(arg string) (string, string) {
+func getCities(arg string) (*WeatherCitys, string) {
 	resp, err := http.Get("http://pogoda.ngs.ru/api/v1/cities?q=" + arg)
 	if err != nil {
 		// handle error
@@ -112,9 +148,17 @@ func getCities(arg string) (string, string) {
 	}
 
 	if s.Errors.Message != "" {
-		return "", s.Errors.Message
+		return s, s.Errors.Message
 	}
 
+	return s, ""
+}
+
+func getCity(arg string) (string, string) {
+	s, err := getCities(arg)
+	if err != "" {
+		return "", err
+	}
 	return s.Cities[0].Alias, ""
 
 }
