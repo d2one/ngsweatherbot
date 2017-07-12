@@ -1,6 +1,11 @@
 package main
 
-import "github.com/boltdb/bolt"
+type UserCity struct {
+	id	int64
+	user_id	int64
+	chat_id	int64
+	city_alias	string
+}
 
 type WeatherCitys struct {
 	Cities []struct {
@@ -91,9 +96,4 @@ type WeatherResponce struct {
 			Count int `json:"count"`
 		} `json:"resultset"`
 	} `json:"metadata"`
-}
-
-type BoltStorage struct {
-	DB         *bolt.DB
-	writerChan chan [3]interface{} //not so agnostic but enough now
 }

@@ -1,12 +1,10 @@
 package main
 
 import (
-	"github.com/boltdb/bolt"
 	"github.com/bot-api/telegram"
 	"github.com/bot-api/telegram/telebot"
 	"golang.org/x/net/context"
 	"log"
-	"strconv"
 	"flag"
 )
 
@@ -18,11 +16,14 @@ func main() {
 		panic("Secret telegram key not setted")
 	}
 
+
+	db :=InitDB("db.sqlite3")
+	CreateTable(db)
 	api := telegram.New(telegramKey)
 	api.Debug(true)
 	bot := telebot.NewWithAPI(api)
 	bot.Use(telebot.Recover()) // recover if handler panic
-	boltStorage := NewBoltStorage("bolt.db")
+
 	netCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -66,15 +67,11 @@ func main() {
 				update := telebot.GetUpdate(ctx)
 				textMessage := "No selected city. Select city with command \n/city {cityName}"
 
-				boltStorage.DB.View(func(tx *bolt.Tx) error {
-					b := tx.Bucket([]byte("users"))
-					v := b.Get([]byte(strconv.FormatInt(update.From().ID, 10)))
-					if v != nil {
-						textMessage = getStations(string(v))
-					}
-					return nil
-				})
 
+				userData := ReadItem(db, update.From().ID)
+				if userData.city_alias != "" {
+					textMessage = getStations(userData.city_alias)
+				}
 				api := telebot.GetAPI(ctx) // take api from context
 				msg := telegram.NewMessage(update.Chat().ID, textMessage)
 				_, err := api.Send(ctx, msg)
@@ -120,7 +117,13 @@ func main() {
 					return nil
 				}
 
-				boltStorage.writerChan <- [3]interface{}{"users", strconv.FormatInt(user.ID, 10), []byte(city.Cities[0].Alias)}
+				userData := UserCity{
+					user_id: user.ID,
+					city_alias: city.Cities[0].Alias,
+					chat_id: update.Chat().ID,
+				}
+
+				StoreItem(db, []UserCity{userData})
 				api.SendMessage(ctx,
 					telegram.NewMessagef(update.Chat().ID,
 						"City selected: %s", city.Cities[0].Title,
