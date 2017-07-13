@@ -5,64 +5,72 @@ import (
 	"io/ioutil"
 	"encoding/json"
 	"log"
-	"strconv"
+	"errors"
+	"fmt"
 )
 
-func getCities(arg string) (*WeatherCitys, string) {
+func getCities(arg string) ([]City, error) {
 	log.Printf("call method getCities:" + arg)
-	resp, err := http.Get("http://pogoda.ngs.ru/api/v1/cities?q=" + arg)
+	body, err := getDataByUrl("http://pogoda.ngs.ru/api/v1/cities?q=" + arg)
 	if err != nil {
-		// handle error
+		return []City{}, err
 	}
 
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		panic(err.Error())
+	var city = new(WeatherCitys)
+	if err = json.Unmarshal(body, &city); err != nil {
+		return nil, err
 	}
 
-	var s = new(WeatherCitys)
-	err = json.Unmarshal(body, &s)
-	if err != nil {
-		log.Printf("whoops:", err)
+	if city.Errors.Message != "" {
+		return nil, errors.New(city.Errors.Message)
 	}
-
-	if s.Errors.Message != "" {
-		return s, s.Errors.Message
-	}
-
-	return s, ""
+	return city.Cities, nil
 }
 
-func getCity(arg string) (string, string) {
-	s, err := getCities(arg)
-	if err != "" {
-		return "", err
+func getCity(arg string) (City, error) {
+	cities, err := getCities(arg)
+	if err != nil {
+		return City{}, err
 	}
-	return s.Cities[0].Alias, ""
+	return cities[0], nil
 
 }
 
-func getStations(arg string) string {
-	log.Printf("call method getStations:" + arg)
-	resp, err := http.Get("http://pogoda.ngs.ru/api/v1/forecasts/current?city=" + arg)
+func getCurrentWeather(arg string) (CurrentWeather, error) {
+	log.Printf("call method getCurrentWeather:" + arg)
+	//TODO сделать кэш на 10 минут
+	body, err := getDataByUrl("http://pogoda.ngs.ru/api/v1/forecasts/current?city=" + arg)
 	if err != nil {
-		// handle error
+		return CurrentWeather{}, err
 	}
+	var weather = new(WeatherResponce)
+	if err = json.Unmarshal(body, &weather); err != nil {
+		return CurrentWeather{}, err
+	}
+	currentWeather := weather.Forecasts
+	return currentWeather[0], nil
+}
 
+func getDataByUrl(url string) ([]byte, error)  {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		panic(err.Error())
+		return nil, err
 	}
+	return body, nil
+}
 
-	var s = new(WeatherResponce)
-	err = json.Unmarshal(body, &s)
-	if err != nil {
-		log.Printf("whoops:", err)
-	}
-
-	messageText := strconv.FormatFloat(float64(s.Forecasts[0].Temperature), 'f', 1, 32) + "°C, " + "Ветер: " + strconv.FormatFloat(float64(s.Forecasts[0].Wind.Speed), 'f', 1, 32) + "м/с, " + s.Forecasts[0].Wind.Direction.Title + ", " + s.Forecasts[0].Cloud.Title + " " + s.Forecasts[0].Precipitation.Title
-	messageText = arg + " " + messageText
+func formatCurrentWeather(weather CurrentWeather) string  {
+	messageText := fmt.Sprintf("%g °C, Ветер: %g м/с, %s %s %s",
+		weather.Temperature,
+		weather.Wind.Speed,
+		weather.Wind.Direction.Title,
+		weather.Cloud.Title,
+		weather.Precipitation.Title,
+	)
 	return messageText
 }

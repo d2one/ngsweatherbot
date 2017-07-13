@@ -1,3 +1,4 @@
 .idea/
 bolt.db
 weatherbot
+db.sqlite3

@@ -1,5 +1,10 @@
 package main
 
+//TODO кэширование ответов апи новостей, относительно прогноза на 10 минут
+//TODO сделать нотификации пользователям, о выбранной погоде, по времени
+//TODO Сделать вывод выбранного текущего города, и так же в прогнозе
+//TODO Няшные менюшки и вообще навигация
+
 import (
 	"github.com/bot-api/telegram"
 	"github.com/bot-api/telegram/telebot"
@@ -10,17 +15,20 @@ import (
 
 func main() {
 	var telegramKey string
+	var debugApi  bool
 	flag.StringVar(&telegramKey, "k", "", "sekret telegram api key")
+	flag.BoolVar(&debugApi, "d", false, "enable api debug mode")
 	flag.Parse()
 	if telegramKey == "" {
 		panic("Secret telegram key not setted")
 	}
 
-
-	db :=InitDB("db.sqlite3")
-	CreateTable(db)
+	db, err := initAppDb()
+	if err != nil {
+		panic(err)
+	}
 	api := telegram.New(telegramKey)
-	api.Debug(true)
+	api.Debug(debugApi)
 	bot := telebot.NewWithAPI(api)
 	bot.Use(telebot.Recover()) // recover if handler panic
 
@@ -32,27 +40,30 @@ func main() {
 		if update.Message == nil {
 			return nil
 		}
-		city, error := getCity(update.Message.Text)
-
-		if error != "" {
+		var textMessage string
+		city, err := getCity(update.Message.Text)
+		if err != nil {
 			_, err := api.SendMessage(ctx,
-				telegram.NewMessagef(update.Chat().ID, error))
+				telegram.NewMessagef(update.Chat().ID, err.Error()))
 			return err
 		}
 
-		textMessage := getStations(city)
+		currentWeather, err := getCurrentWeather(city.Alias)
+		if err != nil {
+			textMessage = "Cant get current weather. Try later"
+		} else {textMessage = formatCurrentWeather(currentWeather)}
 		api := telebot.GetAPI(ctx) // take api from context
 		msg := telegram.NewMessage(update.Chat().ID, textMessage)
-		_, err := api.Send(ctx, msg)
-		return err
-
+		if _, err2 := api.Send(ctx, msg); err2 != nil {
+			return err2
+		}
+		return nil
 	})
 
 	// Use command middleware, that helps to work with commands
 	bot.Use(telebot.Commands(map[string]telebot.Commander{
 		"start": telebot.CommandFunc(
 			func(ctx context.Context, arg string) error {
-
 				api := telebot.GetAPI(ctx)
 				update := telebot.GetUpdate(ctx)
 				_, err := api.SendMessage(ctx,
@@ -66,16 +77,16 @@ func main() {
 			func(ctx context.Context, arg string) error {
 				update := telebot.GetUpdate(ctx)
 				textMessage := "No selected city. Select city with command \n/city {cityName}"
-
-
-				userData := ReadItem(db, update.From().ID)
-				if userData.city_alias != "" {
-					textMessage = getStations(userData.city_alias)
+				userCity, _ := getUserCity(db, update.From().ID)
+				if userCity != (UserCity{}) {
+					if currentWeather, err := getCurrentWeather(userCity.city_alias); err == nil {
+						textMessage = formatCurrentWeather(currentWeather)
+					}
 				}
 				api := telebot.GetAPI(ctx) // take api from context
 				msg := telegram.NewMessage(update.Chat().ID, textMessage)
-				_, err := api.Send(ctx, msg)
-				return err
+				_, err2 := api.Send(ctx, msg)
+				return err2
 			}),
 		"help": telebot.CommandFunc(
 			func(ctx context.Context, arg string) error {
@@ -90,25 +101,21 @@ func main() {
 			}),
 		"city": telebot.CommandFunc(
 			func(ctx context.Context, arg string) error {
-
 				api := telebot.GetAPI(ctx)
 				update := telebot.GetUpdate(ctx)
 				user := update.From()
 
-				city, error := getCities(arg)
-
-				if error != "" {
+				cities, err := getCities(arg)
+				if err != nil {
 					_, err := api.SendMessage(ctx,
-						telegram.NewMessagef(update.Chat().ID, error))
+						telegram.NewMessagef(update.Chat().ID, err.Error()))
 					return err
 				}
 
-				if len(city.Cities) > 1 {
+				if len(cities) > 1 {
 					textMessage := "Please, set city:\n"
-					for index := range city.Cities {
-						log.Println(index)
-						log.Println(city.Cities[index].Alias)
-						textMessage += "/city " + city.Cities[index].Alias + "\n"
+					for index := range cities {
+						textMessage += "/city " + cities[index].Alias + "\n"
 					}
 					api.SendMessage(ctx,
 						telegram.NewMessagef(update.Chat().ID,
@@ -117,24 +124,25 @@ func main() {
 					return nil
 				}
 
-				userData := UserCity{
+				city := cities[0]
+				userCity := UserCity{
 					user_id: user.ID,
-					city_alias: city.Cities[0].Alias,
+					city_alias: city.Alias,
 					chat_id: update.Chat().ID,
 				}
 
-				StoreItem(db, []UserCity{userData})
-				api.SendMessage(ctx,
-					telegram.NewMessagef(update.Chat().ID,
-						"City selected: %s", city.Cities[0].Title,
-					))
+				textMessage := "City selected: " + city.Title
+				if err := saveUserCity(db, userCity); err != nil {
+					textMessage = "Cant set selected city " + city.Title + ". Try later."
+				}
+
+				api.SendMessage(ctx, telegram.NewMessagef(userCity.chat_id, textMessage))
 				return nil
 			}),
 	}))
 
-	err := bot.Serve(netCtx)
+	err = bot.Serve(netCtx)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
-

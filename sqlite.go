@@ -3,16 +3,32 @@ package main
 import (
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
+	"errors"
 )
 
-func InitDB(filepath string) *sql.DB {
-	db, err := sql.Open("sqlite3", filepath)
-	if err != nil { panic(err) }
-	if db == nil { panic("db nil") }
-	return db
+func initAppDb() (*sql.DB, error)  {
+	db, err := initDb("db.sqlite3")
+	if err != nil {
+		return nil, err
+	}
+	if err := initTables(db); err != nil {
+		return nil, err
+	}
+	return db, nil
 }
 
-func CreateTable(db *sql.DB) {
+func initDb(filepath string) (*sql.DB, error) {
+	db, err := sql.Open("sqlite3", filepath)
+	if err != nil {
+		return nil, err
+	}
+	if db == nil {
+		return db, errors.New("db is nil")
+	}
+	return db, nil
+}
+
+func initTables(db *sql.DB) error {
 	// create table if not exists
 	sql_table := `
 	CREATE TABLE IF NOT EXISTS user_city(
@@ -24,11 +40,13 @@ func CreateTable(db *sql.DB) {
 	);
 	`
 
-	_, err := db.Exec(sql_table)
-	if err != nil { panic(err) }
+	if _, err := db.Exec(sql_table); err != nil {
+		return err
+	}
+	return nil
 }
 
-func StoreItem(db *sql.DB, items []UserCity) {
+func saveUserCity(db *sql.DB, item UserCity) error {
 	sqlAddItem := `
 	INSERT OR REPLACE INTO user_city(
 		user_id,
@@ -39,16 +57,15 @@ func StoreItem(db *sql.DB, items []UserCity) {
 	`
 
 	stmt, err := db.Prepare(sqlAddItem)
-	if err != nil { panic(err) }
-	defer stmt.Close()
-
-	for _, item := range items {
-		_, err2 := stmt.Exec(item.user_id, item.chat_id, item.city_alias)
-		if err2 != nil { panic(err2) }
+	if err != nil {
+		return err
 	}
+	defer stmt.Close()
+	_, err2 := stmt.Exec(item.user_id, item.chat_id, item.city_alias)
+	return err2
 }
 
-func ReadItem(db *sql.DB, user_id int64) UserCity {
+func getUserCity(db *sql.DB, user_id int64) (UserCity, error) {
 	sqlReadOne := `
 	SELECT id, user_id, chat_id, city_alias FROM user_city
 	WHERE user_id = ?
@@ -56,7 +73,14 @@ func ReadItem(db *sql.DB, user_id int64) UserCity {
 
 	row := db.QueryRow(sqlReadOne, user_id)
 	item := UserCity{}
-	err := row.Scan(&item.id, &item.user_id, &item.chat_id, &item.city_alias)
-	if err != nil { panic(err) }
-	return item
+	err := row.Scan(&item.id, &item.user_id, &item.chat_id, &item.city_alias);
+	switch {
+		case err == sql.ErrNoRows:
+			return UserCity{}, nil
+		case err != nil:
+			return UserCity{}, err
+		default:
+			return item, nil
+	}
+
 }
