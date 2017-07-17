@@ -1,17 +1,19 @@
 package main
 
 import (
-	"net/http"
-	"io/ioutil"
 	"encoding/json"
-	"log"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"time"
 )
 
+const POGODA_URL = "http://pogoda.ngs.ru"
+
 func getCities(arg string) ([]City, error) {
-	log.Printf("call method getCities:" + arg)
-	body, err := getDataByUrl("http://pogoda.ngs.ru/api/v1/cities?q=" + arg)
+	body, err := getDataByUrl("/api/v1/cities?q=" + arg)
 	if err != nil {
 		return []City{}, err
 	}
@@ -38,8 +40,15 @@ func getCity(arg string) (City, error) {
 
 func getCurrentWeather(arg string) (CurrentWeather, error) {
 	log.Printf("call method getCurrentWeather:" + arg)
-	//TODO сделать кэш на 10 минут
-	body, err := getDataByUrl("http://pogoda.ngs.ru/api/v1/forecasts/current?city=" + arg)
+
+	cachedCurrentWeather, _ := readCache("current_weather" + arg)
+	if cachedCurrentWeather != (CachedItem{}) {
+		currentWeather := new(CurrentWeather)
+		json.Unmarshal([]byte(cachedCurrentWeather.cache_value), &currentWeather)
+		return *currentWeather, nil
+	}
+
+	body, err := getDataByUrl("/api/v1/forecasts/current?city=" + arg)
 	if err != nil {
 		return CurrentWeather{}, err
 	}
@@ -47,12 +56,15 @@ func getCurrentWeather(arg string) (CurrentWeather, error) {
 	if err = json.Unmarshal(body, &weather); err != nil {
 		return CurrentWeather{}, err
 	}
-	currentWeather := weather.Forecasts
-	return currentWeather[0], nil
+	currentWeather := weather.Forecasts[0]
+
+	cacheValue, _ := json.Marshal(currentWeather)
+	saveCache("current_weather"+arg, string(cacheValue), time.Now().Unix()+60*10)
+	return currentWeather, nil
 }
 
-func getDataByUrl(url string) ([]byte, error)  {
-	resp, err := http.Get(url)
+func getDataByUrl(url string) ([]byte, error) {
+	resp, err := http.Get(POGODA_URL + url)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +76,7 @@ func getDataByUrl(url string) ([]byte, error)  {
 	return body, nil
 }
 
-func formatCurrentWeather(weather CurrentWeather) string  {
+func formatCurrentWeather(weather CurrentWeather) string {
 	messageText := fmt.Sprintf("%g °C, Ветер: %g м/с, %s %s %s",
 		weather.Temperature,
 		weather.Wind.Speed,

@@ -1,10 +1,25 @@
 package main
 
 type UserCity struct {
-	id	int64
-	user_id	int64
-	chat_id	int64
+	id         int64
+	user_id    int64
+	chat_id    int64
 	city_alias string
+}
+
+type UserNotification struct {
+	id       int64
+	user_id  int64
+	chat_id  int64
+	next_run int64
+}
+
+type CachedItem struct {
+	id          int64
+	cache_key   string
+	cache_value string
+	ttl         int64
+	ttl_lock    int64
 }
 
 type City struct {
@@ -25,10 +40,10 @@ type CurrentWeather struct {
 		Title string `json:"title"`
 	} `json:"cloud"`
 	Precipitation struct {
-		Title    string `json:"title"`
+		Title string `json:"title"`
 	} `json:"precipitation"`
 	Temperature float64 `json:"temperature"`
-	Wind struct {
+	Wind        struct {
 		Direction struct {
 			Title string `json:"title"`
 		} `json:"direction"`
@@ -38,7 +53,7 @@ type CurrentWeather struct {
 
 type WeatherResponce struct {
 	Forecasts []CurrentWeather `json:"forecasts"`
-	Metadata struct {
+	Metadata  struct {
 		Resultset struct {
 			Count int `json:"count"`
 		} `json:"resultset"`
