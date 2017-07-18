@@ -6,38 +6,31 @@ import (
 	"time"
 )
 
-func readCache(cacheKey string) (CachedItem, error) {
+func readCache(cacheKey string) (*CachedItem, error) {
 	sqlReadOne := `
 	SELECT id, cache_key, cache_value, ttl, ttl_lock FROM weather_cache
 	WHERE cache_key = ?`
-	log.Printf("	SELECT id, cache_key, cache_value, ttl, ttl_lock FROM weather_cache WHERE cache_key = ?" + cacheKey)
-	row := db.QueryRow(sqlReadOne, cacheKey)
-	item := CachedItem{}
-	err := row.Scan(&item.id, &item.cache_key, &item.cache_value, &item.ttl, &item.ttl_lock)
+
+	row := db.DB.QueryRow(sqlReadOne, cacheKey)
+	item := new(CachedItem)
+	err := row.Scan(&item.ID, &item.CacheKey, &item.CacheValue, &item.TTL, &item.TTLLock)
 	switch {
 	case err == sql.ErrNoRows:
-		log.Printf("MOY FOUND")
-		return CachedItem{}, nil
+		return nil, nil
 	case err != nil:
-		log.Printf(err.Error())
-		return CachedItem{}, err
+		return nil, err
 	}
 
 	unixTime := time.Now().Unix()
-	log.Printf("%d", item.ttl)
-	log.Printf("%d", unixTime)
-
-	if item.ttl > unixTime {
-
+	if item.TTL > unixTime {
 		return item, nil
 	}
 
-	if item.ttl < unixTime && item.ttl_lock < unixTime+60*10 && item.ttl_lock > 0 {
-		log.Printf("CACHE FOUND")
+	if item.TTL < unixTime && item.TTLLock < unixTime+60*10 && item.TTLLock > 0 {
 		return item, nil
 	}
 	lockCacheKey(cacheKey)
-	return CachedItem{}, nil
+	return nil, nil
 }
 
 func lockCacheKey(cacheKey string) error {
@@ -45,7 +38,7 @@ func lockCacheKey(cacheKey string) error {
 	sqlAddItem := `
 	INSERT OR REPLACE INTO weather_cache(ttl_lock, cache_key) VALUES (?,?)`
 
-	stmt, err := db.Prepare(sqlAddItem)
+	stmt, err := db.DB.Prepare(sqlAddItem)
 	if err != nil {
 		return err
 	}
@@ -62,7 +55,7 @@ func saveCache(cacheKey string, cacheValue string, ttl int64) error {
 		cache_key, cache_value, ttl, ttl_lock
 	) VALUES (?, ?, ?, ?)`
 
-	stmt, err := db.Prepare(sqlAddItem)
+	stmt, err := db.DB.Prepare(sqlAddItem)
 	if err != nil {
 		return err
 	}
@@ -70,13 +63,6 @@ func saveCache(cacheKey string, cacheValue string, ttl int64) error {
 	if ttl == 0 {
 		ttl = time.Now().Unix() + 60*10
 	}
-
-	item := CachedItem{
-		cache_value: cacheValue,
-		cache_key:   cacheKey,
-		ttl:         ttl,
-		ttl_lock:    0,
-	}
-	_, err = stmt.Exec(item.cache_key, item.cache_value, item.ttl, item.ttl_lock)
+	_, err = stmt.Exec(cacheKey, cacheValue, ttl, 0)
 	return err
 }

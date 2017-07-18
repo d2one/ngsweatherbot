@@ -2,35 +2,29 @@ package main
 
 import (
 	"database/sql"
-	"errors"
+
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func initAppDb() (*sql.DB, error) {
-	db, err := initDb("db.sqlite3")
-	if err != nil {
-		return nil, err
-	}
-	if err := initTables(db); err != nil {
-		return nil, err
-	}
-	return db, nil
+// db *DB
+type DB struct {
+	DB *sql.DB
 }
 
-func initDb(filepath string) (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", filepath)
+func (db *DB) init() error {
+	db.DB, err = sql.Open("sqlite3", "db.sqlite3")
 	if err != nil {
-		return nil, err
+		return err
 	}
-	if db == nil {
-		return db, errors.New("db is nil")
+	if err := db.initTables(); err != nil {
+		return err
 	}
-	return db, nil
+	return nil
 }
 
-func initTables(db *sql.DB) error {
+func (db *DB) initTables() error {
 	// create table if not exists
-	sql_table := `
+	sqlTable := `
 	CREATE TABLE IF NOT EXISTS user_city(
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		user_id INT NOT NULL UNIQUE,
@@ -38,6 +32,7 @@ func initTables(db *sql.DB) error {
 		city_alias TEXT,
 		created_at INTEGER
 	);
+	
 	CREATE TABLE IF NOT EXISTS weather_cache
 	(
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -46,6 +41,7 @@ func initTables(db *sql.DB) error {
 		ttl INTEGER NOT NULL,
 		ttl_lock INTEGER
 	);
+	
 	CREATE UNIQUE INDEX IF NOT EXISTS weather_cache_id_uindex ON weather_cache (id);
 	CREATE UNIQUE INDEX IF NOT EXISTS weather_cache_cache_key_uindex ON weather_cache (cache_key);
 	CREATE TABLE IF NOT EXISTS user_notifications(
@@ -57,32 +53,31 @@ func initTables(db *sql.DB) error {
 	);
 	`
 
-	if _, err := db.Exec(sql_table); err != nil {
+	if _, err := db.DB.Exec(sqlTable); err != nil {
 		return err
 	}
 	return nil
 }
 
-func saveUserCity(item UserCity) error {
+func (db *DB) saveUserCity(UserID int64, CityAlias string) error {
 	sqlAddItem := `
 	INSERT OR REPLACE INTO user_city(
 		user_id,
 		chat_id,
 		city_alias,
 		created_at
-	) values( ?, ?, ?, strftime('%s', 'now'))
-	`
+	) values( ?, ?, ?, strftime('%s', 'now'))`
 
-	stmt, err := db.Prepare(sqlAddItem)
+	stmt, err := db.DB.Prepare(sqlAddItem)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
-	_, err = stmt.Exec(item.user_id, item.chat_id, item.city_alias)
+	_, err = stmt.Exec(UserID, UserID, CityAlias)
 	return err
 }
 
-func saveUserNotification(item UserNotification) error {
+func (db *DB) saveUserNotification(UserNotification UserNotification) error {
 	sqlAddItem := `
 	INSERT OR REPLACE INTO user_notifications(
 		user_id,
@@ -91,50 +86,49 @@ func saveUserNotification(item UserNotification) error {
 		created_at
 	) values( ?, ?, ?, strftime('%s', 'now'))
 	`
-	stmt, err := db.Prepare(sqlAddItem)
+	stmt, err := db.DB.Prepare(sqlAddItem)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
-	_, err = stmt.Exec(item.user_id, item.chat_id, item.next_run)
+	_, err = stmt.Exec(UserNotification.UserID, UserNotification.ChatID, UserNotification.NextRun)
 	return err
 }
 
-func getCronUserNotification() ([]UserNotification, error) {
+func (db *DB) getCronUserNotification() ([]*UserNotification, error) {
 	sqlRead := `
 	SELECT id, user_id, chat_id, next_run FROM user_notifications
 	WHERE next_run <= strftime('%s', 'now')`
 
-	rows, err := db.Query(sqlRead)
+	rows, err := db.DB.Query(sqlRead)
 	if err != nil {
-		return []UserNotification{}, err
+		return nil, err
 	}
-	uns := make([]UserNotification, 0)
+	var uns []*UserNotification
 	for rows.Next() {
-		un := UserNotification{}
-		err = rows.Scan(&un.id, &un.user_id, &un.chat_id, &un.next_run)
-		if err != nil {
-			return []UserNotification{}, err
+		un := new(UserNotification)
+		if err := rows.Scan(&un.ID, &un.UserID, &un.ChatID, &un.NextRun); err != nil {
+			return nil, err
 		}
 		uns = append(uns, un)
 	}
 	return uns, nil
 }
 
-func getUserCity(user_id int64) (UserCity, error) {
+func (db *DB) getUserCity(UserID int64) (*UserCity, error) {
 	sqlReadOne := `
 	SELECT id, user_id, chat_id, city_alias FROM user_city
 	WHERE user_id = ?
 	ORDER BY created_at DESC`
 
-	row := db.QueryRow(sqlReadOne, user_id)
-	item := UserCity{}
-	err := row.Scan(&item.id, &item.user_id, &item.chat_id, &item.city_alias)
+	row := db.DB.QueryRow(sqlReadOne, UserID)
+	item := new(UserCity)
+	err := row.Scan(&item.ID, &item.UserID, &item.ChatID, &item.CityAlias)
 	switch {
 	case err == sql.ErrNoRows:
-		return UserCity{}, nil
+		return nil, nil
 	case err != nil:
-		return UserCity{}, err
+		return nil, err
 	default:
 		return item, nil
 	}

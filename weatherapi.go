@@ -10,15 +10,22 @@ import (
 	"time"
 )
 
-const POGODA_URL = "http://pogoda.ngs.ru"
+// WeatherAPI db
+type WeatherAPI struct {
+	URL string
+}
 
-func getCities(arg string) ([]City, error) {
-	body, err := getDataByUrl("/api/v1/cities?q=" + arg)
+func (api *WeatherAPI) init() {
+	api.URL = "https://pogoda.ngs.ru"
+}
+
+func (api *WeatherAPI) getCities(arg string) ([]*City, error) {
+	body, err := api.getDataByURL("/api/v1/cities?q=" + arg)
 	if err != nil {
-		return []City{}, err
+		return nil, err
 	}
 
-	var city = new(WeatherCitys)
+	var city = new(WeatherCities)
 	if err = json.Unmarshal(body, &city); err != nil {
 		return nil, err
 	}
@@ -29,42 +36,42 @@ func getCities(arg string) ([]City, error) {
 	return city.Cities, nil
 }
 
-func getCity(arg string) (City, error) {
-	cities, err := getCities(arg)
+func (api *WeatherAPI) getCity(arg string) (*City, error) {
+	cities, err := api.getCities(arg)
 	if err != nil {
-		return City{}, err
+		return nil, err
 	}
 	return cities[0], nil
 
 }
 
-func getCurrentWeather(arg string) (CurrentWeather, error) {
-	log.Printf("call method getCurrentWeather:" + arg)
-
+func (api *WeatherAPI) getCurrentWeather(arg string) (*CurrentWeather, error) {
+	log.Println("getCurrentWeather" + arg)
 	cachedCurrentWeather, _ := readCache("current_weather" + arg)
-	if cachedCurrentWeather != (CachedItem{}) {
+	log.Println("CACHE READED getCurrentWeather" + arg)
+	if cachedCurrentWeather != nil {
 		currentWeather := new(CurrentWeather)
-		json.Unmarshal([]byte(cachedCurrentWeather.cache_value), &currentWeather)
-		return *currentWeather, nil
+		json.Unmarshal([]byte(cachedCurrentWeather.CacheValue), &currentWeather)
+		return currentWeather, nil
 	}
-
-	body, err := getDataByUrl("/api/v1/forecasts/current?city=" + arg)
+	log.Println("DATAURL" + arg)
+	body, err := api.getDataByURL("/api/v1/forecasts/current?city=" + arg)
 	if err != nil {
-		return CurrentWeather{}, err
+		return nil, err
 	}
 	var weather = new(WeatherResponce)
 	if err = json.Unmarshal(body, &weather); err != nil {
-		return CurrentWeather{}, err
+		return nil, err
 	}
 	currentWeather := weather.Forecasts[0]
-
 	cacheValue, _ := json.Marshal(currentWeather)
+	log.Println("SAVE CACHE" + arg)
 	saveCache("current_weather"+arg, string(cacheValue), time.Now().Unix()+60*10)
 	return currentWeather, nil
 }
 
-func getDataByUrl(url string) ([]byte, error) {
-	resp, err := http.Get(POGODA_URL + url)
+func (api *WeatherAPI) getDataByURL(url string) ([]byte, error) {
+	resp, err := http.Get(api.URL + url)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +83,7 @@ func getDataByUrl(url string) ([]byte, error) {
 	return body, nil
 }
 
-func formatCurrentWeather(weather CurrentWeather) string {
+func (api *WeatherAPI) formatCurrentWeather(weather *CurrentWeather) string {
 	messageText := fmt.Sprintf("%g °C, Ветер: %g м/с, %s %s %s",
 		weather.Temperature,
 		weather.Wind.Speed,

@@ -7,35 +7,43 @@ package main
 //TODO start using docopt
 
 import (
-	"database/sql"
 	"flag"
+	"log"
+	"os"
+
 	"github.com/bot-api/telegram"
 	"github.com/bot-api/telegram/telebot"
 	"github.com/jasonlvhit/gocron"
 	"golang.org/x/net/context"
-	"log"
 )
 
-var db *sql.DB
+var db DB
+var weatherAPI WeatherAPI
 var err error
 
 func main() {
 	var telegramKey string
-	var debugApi bool
+	var debugAPI bool
 
+	//TODO rebuild on env params
 	flag.StringVar(&telegramKey, "k", "", "sekret telegram api key")
-	flag.BoolVar(&debugApi, "d", false, "enable api debug mode")
+	flag.BoolVar(&debugAPI, "d", false, "enable api debug mode")
 	flag.Parse()
 	if telegramKey == "" {
-		panic("Secret telegram key not setted")
+		log.Println("Secret telegram key not setted")
+		os.Exit(1)
 	}
 
-	db, err = initAppDb()
+	err = db.init()
 	if err != nil {
-		panic(err)
+		log.Println("error init database")
+		os.Exit(1)
 	}
+
+	weatherAPI.init()
+
 	api := telegram.New(telegramKey)
-	api.Debug(debugApi)
+	api.Debug(debugAPI)
 	bot := telebot.NewWithAPI(api)
 	bot.Use(telebot.Recover()) // recover if handler panic
 
@@ -52,11 +60,8 @@ func main() {
 		"city":    telebot.CommandFunc(cityCommand),
 	}))
 
-	gocron.Every(5).Seconds().Do(runNotificationTasks, api, netCtx)
-	<-gocron.Start()
+	gocron.Every(5).Seconds().Do(runNotificationTasks, netCtx, api)
+	//<-gocron.Start()
 
-	err = bot.Serve(netCtx)
-	if err != nil {
-		log.Fatal(err)
-	}
+	log.Fatal(bot.Serve(netCtx))
 }

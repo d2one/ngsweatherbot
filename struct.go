@@ -1,40 +1,46 @@
 package main
 
+// UserCity user selected city
 type UserCity struct {
-	id         int64
-	user_id    int64
-	chat_id    int64
-	city_alias string
+	ID        int64
+	UserID    int64
+	ChatID    int64
+	CityAlias string
 }
 
+// UserNotification user notification
 type UserNotification struct {
-	id       int64
-	user_id  int64
-	chat_id  int64
-	next_run int64
+	ID      int64
+	UserID  int64
+	ChatID  int64
+	NextRun int64
 }
 
+// CachedItem cache
 type CachedItem struct {
-	id          int64
-	cache_key   string
-	cache_value string
-	ttl         int64
-	ttl_lock    int64
+	ID         int64
+	CacheKey   string
+	CacheValue string
+	TTL        int64
+	TTLLock    int64
 }
 
+// City ngs weather api city responce
 type City struct {
 	Alias string `json:"alias"`
 	Title string `json:"title"`
 }
 
-type WeatherCitys struct {
-	Cities []City `json:"cities"`
+// WeatherCities cities
+type WeatherCities struct {
+	Cities []*City `json:"cities"`
 	Errors struct {
 		Code    int    `json:"code"`
 		Message string `json:"message"`
 	} `json:"errors"`
 }
 
+// CurrentWeather current weather
 type CurrentWeather struct {
 	Cloud struct {
 		Title string `json:"title"`
@@ -51,8 +57,9 @@ type CurrentWeather struct {
 	} `json:"wind"`
 }
 
+// WeatherResponce weather response
 type WeatherResponce struct {
-	Forecasts []CurrentWeather `json:"forecasts"`
+	Forecasts []*CurrentWeather `json:"forecasts"`
 	Metadata  struct {
 		Resultset struct {
 			Count int `json:"count"`
