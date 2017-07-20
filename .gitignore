@@ -3,3 +3,6 @@
 bolt.db
 weatherbot
 db.sqlite3
+.DS_Store
+debug
+ngsweatherbot

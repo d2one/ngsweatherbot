@@ -1,10 +1,11 @@
 package main
 
 import (
+	"log"
+
 	"github.com/bot-api/telegram"
 	"github.com/bot-api/telegram/telebot"
 	"golang.org/x/net/context"
-	"log"
 )
 
 func startCommand(ctx context.Context, arg string) error {
@@ -21,14 +22,14 @@ func startCommand(ctx context.Context, arg string) error {
 func currentCommand(ctx context.Context, arg string) error {
 	update := telebot.GetUpdate(ctx)
 	textMessage := "No selected city. Select city with command \n/city {cityName}"
-	log.Println("currnet command")
-	userCity, err := db.getUserCity(update.From().ID)
-	if err != nil {
-		return err
+
+	userCity, err := ds.getUserCity(update.From().ID)
+	if err != nil || userCity == nil {
+		return sendMessage(ctx, update.Chat().ID, textMessage)
 	}
-	log.Println("currnet command USER CITY")
-	if currentWeather, err := weatherAPI.getCurrentWeather(userCity.CityAlias); err == nil {
-		textMessage = weatherAPI.formatCurrentWeather(currentWeather)
+
+	if currentWeather, err := ws.getCurrentWeather(userCity.CityAlias); err == nil {
+		textMessage = ws.formatCurrentWeather(currentWeather)
 	}
 	return sendMessage(ctx, update.Chat().ID, textMessage)
 }
@@ -43,8 +44,8 @@ func sendMessage(ctx context.Context, userID int64, textMessage string) error {
 func cityCommand(ctx context.Context, arg string) error {
 	update := telebot.GetUpdate(ctx)
 	user := update.From()
-
-	cities, err := weatherAPI.getCities(arg)
+	log.Println(arg)
+	cities, err := ws.getCities(arg)
 	if err != nil {
 		return sendMessage(ctx, update.Chat().ID, err.Error())
 	}
@@ -60,7 +61,7 @@ func cityCommand(ctx context.Context, arg string) error {
 	city := cities[0]
 	textMessage := "City selected: " + city.Title
 
-	if err := db.saveUserCity(user.ID, city.Alias); err != nil {
+	if err := ds.saveUserCity(user.ID, city.Alias); err != nil {
 		textMessage = "Cant set selected city " + city.Title + ". Try later."
 	}
 	return sendMessage(ctx, update.Chat().ID, textMessage)
@@ -72,15 +73,15 @@ func defaultCommand(ctx context.Context) error {
 		return nil
 	}
 	var textMessage string
-	city, err := weatherAPI.getCity(update.Message.Text)
+	city, err := ws.getCity(update.Message.Text)
 	if err != nil {
 		return sendMessage(ctx, update.Chat().ID, err.Error())
 	}
 
 	textMessage = "Cant get current weather. Try later"
-	currentWeather, err := weatherAPI.getCurrentWeather(city.Alias)
+	currentWeather, err := ws.getCurrentWeather(city.Alias)
 	if err == nil {
-		textMessage = weatherAPI.formatCurrentWeather(currentWeather)
+		textMessage = ws.formatCurrentWeather(currentWeather)
 	}
 
 	return sendMessage(ctx, update.Chat().ID, textMessage)

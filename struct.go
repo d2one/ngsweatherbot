@@ -8,6 +8,19 @@ type UserCity struct {
 	CityAlias string
 }
 
+// WeatherSource WeatherSource
+type WeatherSource interface {
+	getCities(arg string) ([]*City, error)
+	getCity(arg string) (*City, error)
+	getCurrentWeather(arg string) (*CurrentWeather, error)
+}
+
+// CacheService CacheService
+type CacheService interface {
+	read(cacheKey string) (*CachedItem, error)
+	write(cacheKey string, cacheValue string, ttl int64) error
+}
+
 // UserNotification user notification
 type UserNotification struct {
 	ID      int64
@@ -24,6 +37,8 @@ type CachedItem struct {
 	TTL        int64
 	TTLLock    int64
 }
+
+
 
 // City ngs weather api city responce
 type City struct {

@@ -11,14 +11,16 @@ import (
 	"log"
 	"os"
 
+	"golang.org/x/net/context"
+
 	"github.com/bot-api/telegram"
 	"github.com/bot-api/telegram/telebot"
 	"github.com/jasonlvhit/gocron"
-	"golang.org/x/net/context"
 )
 
-var db DB
-var weatherAPI WeatherAPI
+var ds *DataStore
+var ws *WeatherService
+
 var err error
 
 func main() {
@@ -33,22 +35,14 @@ func main() {
 		log.Println("Secret telegram key not setted")
 		os.Exit(1)
 	}
-
-	err = db.init()
-	if err != nil {
-		log.Println("error init database")
-		os.Exit(1)
-	}
-
-	weatherAPI.init()
-
+	ds = NewDataStore()
+	cache := NewCache()
+	apiW := NewWeatherAPI()
+	ws = NewWeatherService(cache, apiW)
 	api := telegram.New(telegramKey)
 	api.Debug(debugAPI)
 	bot := telebot.NewWithAPI(api)
 	bot.Use(telebot.Recover()) // recover if handler panic
-
-	netCtx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	bot.HandleFunc(defaultCommand)
 
@@ -60,6 +54,8 @@ func main() {
 		"city":    telebot.CommandFunc(cityCommand),
 	}))
 
+	netCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	gocron.Every(5).Seconds().Do(runNotificationTasks, netCtx, api)
 	//<-gocron.Start()
 

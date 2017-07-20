@@ -3,26 +3,33 @@ package main
 import (
 	"database/sql"
 
+	"log"
+
 	_ "github.com/mattn/go-sqlite3"
 )
 
 // db *DB
-type DB struct {
+type DataStore struct {
 	DB *sql.DB
 }
 
-func (db *DB) init() error {
-	db.DB, err = sql.Open("sqlite3", "db.sqlite3")
+// dasdas
+func NewDataStore() *DataStore {
+	db, err := sql.Open("sqlite3", "db.sqlite3")
 	if err != nil {
-		return err
+		log.Println(err)
+		return nil
 	}
-	if err := db.initTables(); err != nil {
-		return err
+
+	dataStore := &DataStore{DB: db}
+	if err := dataStore.initTables(); err != nil {
+		log.Println(err)
+		return nil
 	}
-	return nil
+	return dataStore
 }
 
-func (db *DB) initTables() error {
+func (ds *DataStore) initTables() error {
 	// create table if not exists
 	sqlTable := `
 	CREATE TABLE IF NOT EXISTS user_city(
@@ -53,13 +60,11 @@ func (db *DB) initTables() error {
 	);
 	`
 
-	if _, err := db.DB.Exec(sqlTable); err != nil {
-		return err
-	}
-	return nil
+	_, err = ds.DB.Exec(sqlTable)
+	return err
 }
 
-func (db *DB) saveUserCity(UserID int64, CityAlias string) error {
+func (ds *DataStore) saveUserCity(UserID int64, CityAlias string) error {
 	sqlAddItem := `
 	INSERT OR REPLACE INTO user_city(
 		user_id,
@@ -68,7 +73,7 @@ func (db *DB) saveUserCity(UserID int64, CityAlias string) error {
 		created_at
 	) values( ?, ?, ?, strftime('%s', 'now'))`
 
-	stmt, err := db.DB.Prepare(sqlAddItem)
+	stmt, err := ds.DB.Prepare(sqlAddItem)
 	if err != nil {
 		return err
 	}
@@ -77,7 +82,7 @@ func (db *DB) saveUserCity(UserID int64, CityAlias string) error {
 	return err
 }
 
-func (db *DB) saveUserNotification(UserNotification UserNotification) error {
+func (ds *DataStore) saveUserNotification(UserNotification UserNotification) error {
 	sqlAddItem := `
 	INSERT OR REPLACE INTO user_notifications(
 		user_id,
@@ -86,7 +91,7 @@ func (db *DB) saveUserNotification(UserNotification UserNotification) error {
 		created_at
 	) values( ?, ?, ?, strftime('%s', 'now'))
 	`
-	stmt, err := db.DB.Prepare(sqlAddItem)
+	stmt, err := ds.DB.Prepare(sqlAddItem)
 	if err != nil {
 		return err
 	}
@@ -95,12 +100,12 @@ func (db *DB) saveUserNotification(UserNotification UserNotification) error {
 	return err
 }
 
-func (db *DB) getCronUserNotification() ([]*UserNotification, error) {
+func (ds *DataStore) getCronUserNotification() ([]*UserNotification, error) {
 	sqlRead := `
 	SELECT id, user_id, chat_id, next_run FROM user_notifications
 	WHERE next_run <= strftime('%s', 'now')`
 
-	rows, err := db.DB.Query(sqlRead)
+	rows, err := ds.DB.Query(sqlRead)
 	if err != nil {
 		return nil, err
 	}
@@ -115,13 +120,13 @@ func (db *DB) getCronUserNotification() ([]*UserNotification, error) {
 	return uns, nil
 }
 
-func (db *DB) getUserCity(UserID int64) (*UserCity, error) {
+func (ds *DataStore) getUserCity(UserID int64) (*UserCity, error) {
 	sqlReadOne := `
 	SELECT id, user_id, chat_id, city_alias FROM user_city
 	WHERE user_id = ?
 	ORDER BY created_at DESC`
 
-	row := db.DB.QueryRow(sqlReadOne, UserID)
+	row := ds.DB.QueryRow(sqlReadOne, UserID)
 	item := new(UserCity)
 	err := row.Scan(&item.ID, &item.UserID, &item.ChatID, &item.CityAlias)
 	switch {
