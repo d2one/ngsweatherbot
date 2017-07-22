@@ -11,7 +11,7 @@ type Cache struct {
 	DB *sql.DB
 }
 
-// dasdas
+// Cache Cache
 func NewCache() *Cache {
 	db, err := sql.Open("sqlite3", "db.sqlite3")
 	if err != nil {

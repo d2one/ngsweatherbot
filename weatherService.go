@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 )
 
@@ -30,11 +29,9 @@ func (wc *WeatherService) getCity(arg string) (*City, error) {
 }
 
 func (wc *WeatherService) getCurrentWeather(arg string) (*CurrentWeather, error) {
-	log.Println("CURRENT WEATHER")
 	if cachedCurrentWeather, _ := wc.cache.read("current_weather" + arg); cachedCurrentWeather != nil {
 		currentWeather := &CurrentWeather{}
 		json.Unmarshal([]byte(cachedCurrentWeather.CacheValue), &currentWeather)
-		log.Println("CURRENT CACHED")
 		return currentWeather, nil
 	}
 

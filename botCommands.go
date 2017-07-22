@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"strings"
 
 	"github.com/bot-api/telegram"
 	"github.com/bot-api/telegram/telebot"
@@ -22,12 +23,12 @@ func startCommand(ctx context.Context, arg string) error {
 func currentCommand(ctx context.Context, arg string) error {
 	update := telebot.GetUpdate(ctx)
 	textMessage := "No selected city. Select city with command \n/city {cityName}"
-
+	log.Println("current1")
 	userCity, err := ds.getUserCity(update.From().ID)
 	if err != nil || userCity == nil {
 		return sendMessage(ctx, update.Chat().ID, textMessage)
 	}
-
+	log.Println("current")
 	if currentWeather, err := ws.getCurrentWeather(userCity.CityAlias); err == nil {
 		textMessage = ws.formatCurrentWeather(currentWeather)
 	}
@@ -50,12 +51,39 @@ func cityCommand(ctx context.Context, arg string) error {
 		return sendMessage(ctx, update.Chat().ID, err.Error())
 	}
 
+	if update.CallbackQuery != nil {
+		log.Println("cityCommand")
+		log.Println(update.CallbackQuery)
+	}
+
 	if len(cities) > 1 {
-		textMessage := "Please, set city:\n"
-		for index := range cities {
-			textMessage += "/city " + cities[index].Alias + "\n"
+		msg := telegram.NewMessage(update.Chat().ID, "Please, set city:")
+		var keyboardText = [][]telegram.InlineKeyboardButton{}
+		keyboardRow := []telegram.InlineKeyboardButton{}
+		for index, city := range cities {
+			log.Println(index)
+			log.Println(city.Title)
+			keyboardRow = append(
+				keyboardRow,
+				telegram.InlineKeyboardButton{
+					Text:         city.Title,
+					CallbackData: "/city " + city.Alias,
+				},
+			)
+
+			if (index+1)%3 == 0 {
+				keyboardText = append(keyboardText, keyboardRow)
+				keyboardRow = []telegram.InlineKeyboardButton{}
+			}
 		}
-		return sendMessage(ctx, update.Chat().ID, textMessage)
+
+		msg.ReplyMarkup = telegram.InlineKeyboardMarkup{
+			InlineKeyboard: keyboardText,
+		}
+
+		api := telebot.GetAPI(ctx) // take api from context
+		_, err := api.SendMessage(ctx, msg)
+		return err
 	}
 
 	city := cities[0]
@@ -69,21 +97,28 @@ func cityCommand(ctx context.Context, arg string) error {
 
 func defaultCommand(ctx context.Context) error {
 	update := telebot.GetUpdate(ctx) // take update from context
+
+	if update.CallbackQuery != nil {
+		data := update.CallbackQuery.Data
+		if strings.HasPrefix(data, "/city ") {
+			city := strings.Replace(data, "/city ", "", -1)
+			cityCommand(ctx, city)
+		}
+	}
+
 	if update.Message == nil {
 		return nil
 	}
-	var textMessage string
+
 	city, err := ws.getCity(update.Message.Text)
-	if err != nil {
+	if city == nil {
 		return sendMessage(ctx, update.Chat().ID, err.Error())
 	}
 
-	textMessage = "Cant get current weather. Try later"
-	currentWeather, err := ws.getCurrentWeather(city.Alias)
-	if err == nil {
+	textMessage := "Cant get current weather. Try later"
+	if currentWeather, err := ws.getCurrentWeather(city.Alias); err == nil {
 		textMessage = ws.formatCurrentWeather(currentWeather)
 	}
-
 	return sendMessage(ctx, update.Chat().ID, textMessage)
 }
 
