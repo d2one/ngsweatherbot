@@ -37,20 +37,10 @@ func (ds *DataStore) initTables() error {
 		user_id INT NOT NULL UNIQUE,
 		chat_id INT NOT NULL UNIQUE,
 		city_alias TEXT,
+		city_title TEXT,
 		created_at INTEGER
 	);
 	
-	CREATE TABLE IF NOT EXISTS weather_cache
-	(
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		cache_key VARCHAR NOT NULL,
-		cache_value TEXT NOT NULL,
-		ttl INTEGER NOT NULL,
-		ttl_lock INTEGER
-	);
-	
-	CREATE UNIQUE INDEX IF NOT EXISTS weather_cache_id_uindex ON weather_cache (id);
-	CREATE UNIQUE INDEX IF NOT EXISTS weather_cache_cache_key_uindex ON weather_cache (cache_key);
 	CREATE TABLE IF NOT EXISTS user_notifications(
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		user_id INT NOT NULL UNIQUE,
@@ -64,21 +54,22 @@ func (ds *DataStore) initTables() error {
 	return err
 }
 
-func (ds *DataStore) saveUserCity(UserID int64, CityAlias string) error {
+func (ds *DataStore) saveUserCity(UserID int64, city *City) error {
 	sqlAddItem := `
 	INSERT OR REPLACE INTO user_city(
 		user_id,
 		chat_id,
 		city_alias,
+		city_title,
 		created_at
-	) values( ?, ?, ?, strftime('%s', 'now'))`
+	) values( ?, ?, ?, ?, strftime('%s', 'now'))`
 
 	stmt, err := ds.DB.Prepare(sqlAddItem)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
-	_, err = stmt.Exec(UserID, UserID, CityAlias)
+	_, err = stmt.Exec(UserID, UserID, city.Alias, city.Title)
 	return err
 }
 
@@ -122,13 +113,13 @@ func (ds *DataStore) getCronUserNotification() ([]*UserNotification, error) {
 
 func (ds *DataStore) getUserCity(UserID int64) (*UserCity, error) {
 	sqlReadOne := `
-	SELECT id, user_id, chat_id, city_alias FROM user_city
+	SELECT id, user_id, chat_id, city_alias, city_title FROM user_city
 	WHERE user_id = ?
 	ORDER BY created_at DESC`
 
 	row := ds.DB.QueryRow(sqlReadOne, UserID)
 	item := new(UserCity)
-	err := row.Scan(&item.ID, &item.UserID, &item.ChatID, &item.CityAlias)
+	err := row.Scan(&item.ID, &item.UserID, &item.ChatID, &item.CityAlias, &item.CityTitle)
 	switch {
 	case err == sql.ErrNoRows:
 		return nil, nil

@@ -23,6 +23,7 @@ var ds *DataStore
 var ws *WeatherService
 var debugAPI bool
 var err error
+var cache CacheService
 
 func main() {
 	var telegramKey string
@@ -36,9 +37,10 @@ func main() {
 		os.Exit(1)
 	}
 	ds = NewDataStore()
-	cache := NewCache()
+	cache = NewCache()
 	apiW := NewWeatherAPI()
 	ws = NewWeatherService(cache, apiW)
+
 	api := telegram.New(telegramKey)
 	api.Debug(debugAPI)
 	bot := telebot.NewWithAPI(api)

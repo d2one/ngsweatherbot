@@ -6,6 +6,7 @@ type UserCity struct {
 	UserID    int64
 	ChatID    int64
 	CityAlias string
+	CityTitle string
 }
 
 // WeatherSource WeatherSource
@@ -13,12 +14,14 @@ type WeatherSource interface {
 	getCities(arg string) ([]*City, error)
 	getCity(arg string) (*City, error)
 	getCurrentWeather(arg string) (*CurrentWeather, error)
+	getForecast(arg string) (*WeatherResponceForecasts, error)
 }
 
 // CacheService CacheService
 type CacheService interface {
 	read(cacheKey string) (*CachedItem, error)
 	write(cacheKey string, cacheValue string, ttl int64) error
+	delete(cacheKey string) error
 }
 
 // UserNotification user notification
@@ -37,8 +40,6 @@ type CachedItem struct {
 	TTL        int64
 	TTLLock    int64
 }
-
-
 
 // City ngs weather api city responce
 type City struct {
@@ -70,14 +71,39 @@ type CurrentWeather struct {
 		} `json:"direction"`
 		Speed float64 `json:"speed"`
 	} `json:"wind"`
+	IconPath string `json:"icon_path"`
 }
 
 // WeatherResponce weather response
 type WeatherResponce struct {
 	Forecasts []*CurrentWeather `json:"forecasts"`
-	Metadata  struct {
-		Resultset struct {
-			Count int `json:"count"`
-		} `json:"resultset"`
-	} `json:"metadata"`
+}
+
+type WeatherResponceForecasts struct {
+	Forecasts []struct {
+		Date  string `json:"date"`
+		Hours []struct {
+			Hour        int `json:"hour"`
+			Temperature struct {
+				Avg int `json:"avg"`
+			} `json:"temperature"`
+			Pressure struct {
+				Avg int `json:"avg"`
+			} `json:"pressure"`
+			Wind struct {
+				Speed struct {
+					Avg int `json:"avg"`
+				} `json:"speed"`
+				Direction struct {
+					Title string `json:"title"`
+				} `json:"direction"`
+			} `json:"wind"`
+			Cloud struct {
+				Title string `json:"title"`
+			} `json:"cloud"`
+			Precipitation struct {
+				Title string `json:"title"`
+			} `json:"precipitation"`
+		} `json:"hours"`
+	} `json:"forecasts"`
 }

@@ -105,3 +105,17 @@ func (cache *Cache) write(cacheKey string, cacheValue string, ttl int64) error {
 	_, err = stmt.Exec(cacheKey, cacheValue, ttl, 0)
 	return err
 }
+
+func (cache *Cache) delete(cacheKey string) error {
+
+	sqlAddItem := `
+	DELETE FROM weather_cache WHERE cache_key = ?`
+
+	stmt, err := cache.DB.Prepare(sqlAddItem)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	_, err = stmt.Exec(cacheKey)
+	return err
+}

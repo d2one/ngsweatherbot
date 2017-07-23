@@ -43,6 +43,21 @@ func (wc *WeatherService) getCurrentWeather(arg string) (*CurrentWeather, error)
 	return nil, nil
 }
 
+func (wc *WeatherService) getForecast(arg string) (*WeatherResponceForecasts, error) {
+	if cachedForecast, _ := wc.cache.read("forecast_weather" + arg); cachedForecast != nil {
+		forecast := &WeatherResponceForecasts{}
+		json.Unmarshal([]byte(cachedForecast.CacheValue), &forecast)
+		return forecast, nil
+	}
+
+	if forecast, _ := wc.weatherSource.getForecast(arg); forecast != nil {
+		cacheValue, _ := json.Marshal(forecast)
+		wc.cache.write("forecast_weather"+arg, string(cacheValue), time.Now().Unix()+60*10)
+		return forecast, nil
+	}
+	return nil, nil
+}
+
 func (wc *WeatherService) formatCurrentWeather(weather *CurrentWeather) string {
 	messageText := fmt.Sprintf("%g °C, Ветер: %g м/с, %s %s %s",
 		weather.Temperature,
@@ -51,5 +66,10 @@ func (wc *WeatherService) formatCurrentWeather(weather *CurrentWeather) string {
 		weather.Cloud.Title,
 		weather.Precipitation.Title,
 	)
+	return messageText
+}
+
+func (wc *WeatherService) formatForecasttWeather(weather *WeatherResponceForecasts) string {
+	messageText := "FOREEECAST"
 	return messageText
 }

@@ -62,6 +62,18 @@ func (Weatherapi *WeatherAPI) getCurrentWeather(arg string) (*CurrentWeather, er
 	return currentWeather, nil
 }
 
+func (Weatherapi *WeatherAPI) getForecast(arg string) (*WeatherResponceForecasts, error) {
+	body, err := Weatherapi.getDataByURL("/api/v1/forecasts/forecast?city=" + arg)
+	if err != nil {
+		return nil, err
+	}
+	var weather = &WeatherResponceForecasts{}
+	if err = json.Unmarshal(body, &weather); err != nil {
+		return nil, err
+	}
+	return weather, nil
+}
+
 func (Weatherapi *WeatherAPI) getDataByURL(url string) ([]byte, error) {
 	resp, err := http.Get(Weatherapi.URL + url)
 	if err != nil {
