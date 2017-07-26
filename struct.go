@@ -79,31 +79,33 @@ type WeatherResponce struct {
 	Forecasts []*CurrentWeather `json:"forecasts"`
 }
 
+type HourForecat struct {
+	Hour        int `json:"hour"`
+	Temperature struct {
+		Avg float64 `json:"avg"`
+	} `json:"temperature"`
+	Pressure struct {
+		Avg float64 `json:"avg"`
+	} `json:"pressure"`
+	Wind struct {
+		Speed struct {
+			Avg float64 `json:"avg"`
+		} `json:"speed"`
+		Direction struct {
+			Title string `json:"title"`
+		} `json:"direction"`
+	} `json:"wind"`
+	Cloud struct {
+		Title string `json:"title"`
+	} `json:"cloud"`
+	Precipitation struct {
+		Title string `json:"title"`
+	} `json:"precipitation"`
+}
+
 type WeatherResponceForecasts struct {
 	Forecasts []struct {
-		Date  string `json:"date"`
-		Hours []struct {
-			Hour        int `json:"hour"`
-			Temperature struct {
-				Avg int `json:"avg"`
-			} `json:"temperature"`
-			Pressure struct {
-				Avg int `json:"avg"`
-			} `json:"pressure"`
-			Wind struct {
-				Speed struct {
-					Avg int `json:"avg"`
-				} `json:"speed"`
-				Direction struct {
-					Title string `json:"title"`
-				} `json:"direction"`
-			} `json:"wind"`
-			Cloud struct {
-				Title string `json:"title"`
-			} `json:"cloud"`
-			Precipitation struct {
-				Title string `json:"title"`
-			} `json:"precipitation"`
-		} `json:"hours"`
+		Date  string         `json:"date"`
+		Hours []*HourForecat `json:"hours"`
 	} `json:"forecasts"`
 }

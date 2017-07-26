@@ -44,14 +44,14 @@ func settingsCommand(ctx context.Context, arg string) error {
 	update := telebot.GetUpdate(ctx)
 	api := telebot.GetAPI(ctx) // take api from context
 	msg := telegram.NewMessage(update.Chat().ID, "Настройки:")
-	msg.ReplyMarkup = buildKeybopard([]string{"Город по умолчанию", "Уведомления"}, 2, false)
+	msg.ReplyMarkup = buildKeybopard([]string{"Город по умолчанию", "Уведомления", "\xE2\x86\xA9 Назад"}, 3, false)
 	_, err := api.Send(ctx, msg)
 	return err
 }
 
 func currentCommand(ctx context.Context, arg string) error {
 	update := telebot.GetUpdate(ctx)
-	textMessage := "No selected city. Select city with command \n/city {cityName}"
+	textMessage := "Город не выбран. Выберете город в настройках."
 	log.Println("current1")
 	userCity, err := ds.getUserCity(update.From().ID)
 	if err != nil || userCity == nil {
@@ -66,7 +66,7 @@ func currentCommand(ctx context.Context, arg string) error {
 
 func commandForecast(ctx context.Context, arg string) error {
 	update := telebot.GetUpdate(ctx)
-	textMessage := "No selected city. Select city with command \n/city {cityName}"
+	textMessage := "Город не выбран. Выберете город в настройках."
 	log.Println("current1")
 	userCity, err := ds.getUserCity(update.From().ID)
 	if err != nil || userCity == nil {
@@ -74,15 +74,15 @@ func commandForecast(ctx context.Context, arg string) error {
 	}
 	log.Println("forecast")
 	if forecast, err := ws.getForecast(userCity.CityAlias); err == nil {
-		textMessage = userCity.CityTitle + " " + ws.formatForecasttWeather(forecast)
+		textMessage = userCity.CityTitle + "\n" + ws.formatForecasttWeather(forecast)
 	}
 	return sendMessage(ctx, update.Chat().ID, textMessage, nil)
 }
 func sendMessage(ctx context.Context, userID int64, textMessage string, markup telegram.ReplyMarkup) error {
 	api := telebot.GetAPI(ctx) // take api from context
 	msg := telegram.NewMessage(userID, textMessage)
+	msg.ParseMode = "markdown"
 	if markup != nil {
-		log.Println("MARKUP")
 		msg.ReplyMarkup = markup
 	}
 	_, err := api.Send(ctx, msg)
@@ -117,7 +117,7 @@ func cityCommand(ctx context.Context, arg string) error {
 					CallbackData: "/city " + city.Alias,
 				},
 			)
-
+			// TODO проверку на количество
 			if (index+1)%3 == 0 {
 				keyboardText = append(keyboardText, keyboardRow)
 				keyboardRow = []telegram.InlineKeyboardButton{}
@@ -157,16 +157,20 @@ func defaultCommand(ctx context.Context) error {
 		return nil
 	}
 
-	switch {
-	case update.Message.Text == "Сейчас":
+	//TODO выделить эту штуку в отдельную ф-ю
+	switch update.Message.Text {
+	case "Сейчас":
 		return currentCommand(ctx, "")
-	case update.Message.Text == "Настройки":
+	case "Настройки":
 		return settingsCommand(ctx, "")
-	case update.Message.Text == "Город по умолчанию":
+	case "Город по умолчанию":
 		cache.write(strconv.Itoa(int(update.Chat().ID)), "default_city", time.Now().Unix()+60*10)
 		return sendMessage(ctx, update.Chat().ID, "Введите город по умолчанию:", nil)
-	case update.Message.Text == "Прогноз":
+	case "Прогноз":
 		return commandForecast(ctx, "")
+	case "\xE2\x86\xA9 Назад":
+		cache.delete(strconv.Itoa(int(update.Chat().ID)))
+		return startCommand(ctx, "")
 	}
 
 	if lastCommand, _ := cache.read(strconv.Itoa(int(update.Chat().ID))); lastCommand != nil {
