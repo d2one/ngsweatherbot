@@ -5,7 +5,7 @@ package main
 //TODO Сделать вывод выбранного текущего города, и так же в прогнозе
 //TODO Няшные менюшки и вообще навигация
 //TODO start using docopt
-
+//TODO сделать подробный прогноз и не очень
 import (
 	"flag"
 	"log"
@@ -24,6 +24,7 @@ var ws *WeatherService
 var debugAPI bool
 var err error
 var cache CacheService
+var wi *WeatherIcon
 
 func main() {
 	var telegramKey string
@@ -37,6 +38,7 @@ func main() {
 		os.Exit(1)
 	}
 	ds = NewDataStore()
+	wi = NewWeatherIcon()
 	cache = NewCache()
 	apiW := NewWeatherAPI()
 	ws = NewWeatherService(cache, apiW)

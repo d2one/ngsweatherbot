@@ -60,13 +60,16 @@ type WeatherCities struct {
 type CurrentWeather struct {
 	Cloud struct {
 		Title string `json:"title"`
+		Value string `json:"value"`
 	} `json:"cloud"`
 	Precipitation struct {
 		Title string `json:"title"`
+		Value string `json:"value"`
 	} `json:"precipitation"`
 	Temperature float64 `json:"temperature"`
 	Wind        struct {
 		Direction struct {
+			Value string `json:"value"`
 			Title string `json:"title"`
 		} `json:"direction"`
 		Speed float64 `json:"speed"`
@@ -84,21 +87,21 @@ type HourForecat struct {
 	Temperature struct {
 		Avg float64 `json:"avg"`
 	} `json:"temperature"`
-	Pressure struct {
-		Avg float64 `json:"avg"`
-	} `json:"pressure"`
 	Wind struct {
 		Speed struct {
 			Avg float64 `json:"avg"`
 		} `json:"speed"`
 		Direction struct {
+			Value string `json:"value"`
 			Title string `json:"title"`
 		} `json:"direction"`
 	} `json:"wind"`
 	Cloud struct {
+		Value string `json:"value"`
 		Title string `json:"title"`
 	} `json:"cloud"`
 	Precipitation struct {
+		Value string `json:"value"`
 		Title string `json:"title"`
 	} `json:"precipitation"`
 }

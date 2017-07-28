@@ -60,12 +60,12 @@ func (wc *WeatherService) getForecast(arg string) (*WeatherResponceForecasts, er
 }
 
 func (wc *WeatherService) formatCurrentWeather(weather *CurrentWeather) string {
-	messageText := fmt.Sprintf("%g °C, Ветер: %g м/с, %s %s %s",
+	messageText := fmt.Sprintf("%g °C, %s %g м/с, %s %s",
 		weather.Temperature,
+		wi.getWind(weather.Wind.Direction.Value),
 		weather.Wind.Speed,
-		weather.Wind.Direction.Title,
-		weather.Cloud.Title,
-		weather.Precipitation.Title,
+		wi.getClouds(weather.Cloud.Value),
+		wi.getPrecipitations(weather.Precipitation.Value),
 	)
 	return messageText
 }
@@ -110,12 +110,14 @@ func (wc *WeatherService) formatForecasttWeather(weather *WeatherResponceForecas
 }
 
 func formatForecast(hourForecast *HourForecat) string {
-	log.Println(hourForecast.Temperature)
+	log.Println(hourForecast.Wind.Direction.Value)
+	log.Println(hourForecast.Wind.Direction.Title)
+
 	return fmt.Sprintf("%v °C, Ветер: %v м/с, %s %s %s \n",
 		hourForecast.Temperature.Avg,
 		hourForecast.Wind.Speed.Avg,
-		hourForecast.Wind.Direction.Title,
-		hourForecast.Cloud.Title,
-		hourForecast.Precipitation.Title,
+		wi.getWind(hourForecast.Wind.Direction.Value),
+		wi.getClouds(hourForecast.Cloud.Value),
+		wi.getPrecipitations(hourForecast.Precipitation.Value),
 	)
 }
