@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-// weather.WeatherAPI db
+// WeatherAPI db
 type WeatherAPI struct {
 	URL string
 }

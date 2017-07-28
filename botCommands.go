@@ -78,6 +78,43 @@ func commandForecast(ctx context.Context, arg string) error {
 	}
 	return sendMessage(ctx, update.Chat().ID, textMessage, nil)
 }
+
+func commandNotifications(ctx context.Context, arg string) error {
+	update := telebot.GetUpdate(ctx)
+	// textMessage := "Время не выбрано"
+
+	t := time.Now()
+	s := strings.Split(arg, ":")
+
+	if len(s) != 2 {
+		return sendMessage(ctx, update.Chat().ID, "Неверный формат времени", nil)
+	}
+
+	hours, err := strconv.Atoi(s[0])
+	if err != nil {
+		return sendMessage(ctx, update.Chat().ID, "Неверный формат времени", nil)
+	}
+	minutes, err := strconv.Atoi(s[1])
+	if err != nil {
+		return sendMessage(ctx, update.Chat().ID, "Неверный формат времени", nil)
+	}
+	time := time.Date(t.Year(), t.Month(), t.Day(), hours, minutes, int(0), int(0), time.Local)
+
+	if t.Unix() > time.Unix() {
+		time = time.AddDate(0, 0, 1)
+	}
+	un := &UserNotification{
+		UserID:  update.Chat().ID,
+		ChatID:  update.Chat().ID,
+		NextRun: time.Unix(),
+	}
+	if err = ds.saveUserNotification(*un); err != nil {
+		logWork(err)
+	}
+	cache.delete(strconv.Itoa(int(update.Chat().ID)))
+	return sendMessage(ctx, update.Chat().ID, "Установлено: "+time.Format("15:04"), getDefaultKeyboard())
+}
+
 func sendMessage(ctx context.Context, userID int64, textMessage string, markup telegram.ReplyMarkup) error {
 	api := telebot.GetAPI(ctx) // take api from context
 	msg := telegram.NewMessage(userID, textMessage)
@@ -168,15 +205,21 @@ func defaultCommand(ctx context.Context) error {
 		return sendMessage(ctx, update.Chat().ID, "Введите город по умолчанию:", nil)
 	case "Прогноз":
 		return commandForecast(ctx, "")
+	case "Уведомления":
+		cache.write(strconv.Itoa(int(update.Chat().ID)), "notification_user", time.Now().Unix()+60*10)
+		return sendMessage(ctx, update.Chat().ID, "Введите время для нотификаций:", nil)
 	case "\xE2\x86\xA9 Назад":
 		cache.delete(strconv.Itoa(int(update.Chat().ID)))
 		return startCommand(ctx, "")
 	}
 
 	if lastCommand, _ := cache.read(strconv.Itoa(int(update.Chat().ID))); lastCommand != nil {
-		if lastCommand.CacheValue == "default_city" {
+		switch lastCommand.CacheValue {
+		case "default_city":
 			cache.delete(strconv.Itoa(int(update.Chat().ID)))
 			return cityCommand(ctx, update.Message.Text)
+		case "notification_user":
+			return commandNotifications(ctx, update.Message.Text)
 		}
 	}
 

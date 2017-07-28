@@ -22,12 +22,12 @@ func runNotificationTasks(ctx context.Context, api *telegram.API) error {
 			continue
 		}
 
-		currentWeather, err := ws.getCurrentWeather(userCity.CityAlias)
+		forecast, err := ws.getForecast(userCity.CityAlias)
 		if err != nil {
-			logWork(err)
 			continue
 		}
-		msg := telegram.NewMessage(userNotification.ChatID, ws.formatCurrentWeather(currentWeather))
+		textMessage := userCity.CityTitle + "\n" + ws.formatForecasttWeather(forecast)
+		msg := telegram.NewMessage(userNotification.ChatID, textMessage)
 		if _, err := api.Send(ctx, msg); err != nil {
 			logWork(err)
 		}
