@@ -26,6 +26,15 @@ func getDefaultKeyboard() telegram.ReplyMarkup {
 	}, 3, false)
 }
 
+func getSettingKeyboard() telegram.ReplyMarkup {
+	return buildKeybopard([]string{
+		wi.getButtons("default_city"),
+		wi.getButtons("notifications"),
+		wi.getButtons("notifications"),
+		wi.getButtons("back"),
+	}, 2, false)
+}
+
 func buildKeybopard(menu []string, rows int, oneTimeKeyboard bool) telegram.ReplyKeyboardMarkup {
 	var keyboard = [][]string{}
 	var keyboardRow = []string{}
@@ -48,11 +57,7 @@ func settingsCommand(ctx context.Context, arg string) error {
 	update := telebot.GetUpdate(ctx)
 	api := telebot.GetAPI(ctx) // take api from context
 	msg := telegram.NewMessage(update.Chat().ID, "Настройки:")
-	msg.ReplyMarkup = buildKeybopard([]string{
-		wi.getButtons("default_city"),
-		wi.getButtons("notifications"),
-		wi.getButtons("back"),
-	}, 3, false)
+	msg.ReplyMarkup = getSettingKeyboard()
 	_, err := api.Send(ctx, msg)
 	return err
 }
@@ -203,9 +208,26 @@ func defaultCommand(ctx context.Context) error {
 		return sendMessage(ctx, update.Chat().ID, "Введите город по умолчанию:", nil)
 	case wi.getButtons("forecast"):
 		return commandForecast(ctx, "")
-	case wi.getButtons("notifications"):
+	case wi.getButtons("notifications_set"):
 		cache.write(strconv.Itoa(int(update.Chat().ID)), "notification_user", time.Now().Unix()+60*10)
-		return sendMessage(ctx, update.Chat().ID, "Введите время для нотификаций:", nil)
+		return sendMessage(ctx, update.Chat().ID, "Введите время", nil)
+	case wi.getButtons("notifications_remove"):
+		ds.deleteUserNotification(update.Chat().ID)
+		return sendMessage(ctx, update.Chat().ID, "Уведомления отключены", getDefaultKeyboard())
+	case wi.getButtons("notifications"):
+
+		userNotification, _ := ds.getUserNotification(int(update.Chat().ID))
+		textMessage := "Уведомления выключены"
+		if userNotification != nil {
+			t := time.Unix(int64(userNotification.NextRun), 0)
+			textMessage = "Уведомления включены: " + t.Format("15:4")
+		}
+		keyboard := buildKeybopard([]string{
+			wi.getButtons("notifications_set"),
+			wi.getButtons("notifications_remove"),
+			wi.getButtons("back"),
+		}, 3, false)
+		return sendMessage(ctx, update.Chat().ID, textMessage, keyboard)
 	case wi.getButtons("back"):
 		cache.delete(strconv.Itoa(int(update.Chat().ID)))
 		return startCommand(ctx, "")

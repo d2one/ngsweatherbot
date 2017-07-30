@@ -91,6 +91,19 @@ func (ds *DataStore) saveUserNotification(UserNotification UserNotification) err
 	return err
 }
 
+func (ds *DataStore) deleteUserNotification(userID int64) error {
+	sqlAddItem := `
+	DELETE FROM user_notifications WHERE user_id = ?
+	`
+	stmt, err := ds.DB.Prepare(sqlAddItem)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+	_, err = stmt.Exec(userID)
+	return err
+}
+
 func (ds *DataStore) getCronUserNotification() ([]*UserNotification, error) {
 	sqlRead := `
 	SELECT id, user_id, chat_id, next_run FROM user_notifications
@@ -109,6 +122,24 @@ func (ds *DataStore) getCronUserNotification() ([]*UserNotification, error) {
 		uns = append(uns, un)
 	}
 	return uns, nil
+}
+
+func (ds *DataStore) getUserNotification(userID int) (*UserNotification, error) {
+	sqlRead := `
+	SELECT id, user_id, chat_id, next_run FROM user_notifications
+	WHERE user_id <= ?`
+
+	row := ds.DB.QueryRow(sqlRead, userID)
+	item := new(UserNotification)
+	err := row.Scan(&item.ID, &item.UserID, &item.ChatID, &item.NextRun)
+	switch {
+	case err == sql.ErrNoRows:
+		return nil, nil
+	case err != nil:
+		return nil, err
+	default:
+		return item, nil
+	}
 }
 
 func (ds *DataStore) getUserCity(UserID int64) (*UserCity, error) {

@@ -8,12 +8,14 @@ type WeatherIcon struct {
 func NewWeatherIcon() *WeatherIcon {
 	icons := map[string]map[string]string{
 		"buttons": map[string]string{
-			"back":          "\xF0\x9F\x94\x99",
-			"default_city":  "\xF0\x9F\x8F\xA2",
-			"notifications": "\xF0\x9F\x94\x94",
-			"settings":      "\xF0\x9F\x94\xA7",
-			"forecast":      "\xF0\x9F\x93\xAF Прогноз",
-			"current":       "\xF0\x9F\x94\x86 Сейчас",
+			"back":                 "\xF0\x9F\x94\x99",
+			"default_city":         "\xF0\x9F\x8F\xA2 Установить город",
+			"notifications":        "\xF0\x9F\x94\x94 Уведомления",
+			"notifications_set":    "\xE2\x8F\xB0",
+			"notifications_remove": "\xE2\x9D\x8C",
+			"settings":             "\xF0\x9F\x94\xA7 Настройки",
+			"forecast":             "\xF0\x9F\x93\xAF Прогноз",
+			"current":              "\xF0\x9F\x94\x86 Сейчас",
 		},
 		"wind": map[string]string{
 			"north_west": "\xE2\x86\x96",
