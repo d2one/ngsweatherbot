@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"time"
+
+	"github.com/bot-api/telegram"
 )
 
 // WeatherService WeatherService
@@ -59,7 +61,8 @@ func (wc *WeatherService) getForecast(arg string) (*WeatherResponceForecasts, er
 	return nil, nil
 }
 
-func (wc *WeatherService) formatCurrentWeather(weather *CurrentWeather) string {
+func (wc *WeatherService) formatCurrentWeather(weather *CurrentWeather) (string, telegram.InlineKeyboardMarkup) {
+	var inlineKeyboard = [][]telegram.InlineKeyboardButton{}
 	messageText := fmt.Sprintf("%g °C, %s %g м/с, %s %s",
 		weather.Temperature,
 		wi.getWind(weather.Wind.Direction.Value),
@@ -67,7 +70,20 @@ func (wc *WeatherService) formatCurrentWeather(weather *CurrentWeather) string {
 		wi.getClouds(weather.Cloud.Value),
 		wi.getPrecipitations(weather.Precipitation.Value),
 	)
-	return messageText
+
+	inlineKeyboard = [][]telegram.InlineKeyboardButton{
+		[]telegram.InlineKeyboardButton{
+			telegram.InlineKeyboardButton{
+				Text: "pogoda.ngs.ru",
+				URL:  "https://pogoda.ngs.ru/" + weather.Links.City,
+			},
+		},
+	}
+
+	replyMarkup := telegram.InlineKeyboardMarkup{
+		InlineKeyboard: inlineKeyboard,
+	}
+	return messageText, replyMarkup
 }
 
 func (wc *WeatherService) formatForecasttWeather(weather *WeatherResponceForecasts) string {

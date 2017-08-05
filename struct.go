@@ -2,8 +2,6 @@ package main
 
 // UserCity user selected city
 type UserCity struct {
-	ID        int64
-	UserID    int64
 	ChatID    int64
 	CityAlias string
 	CityTitle string
@@ -75,6 +73,9 @@ type CurrentWeather struct {
 		Speed float64 `json:"speed"`
 	} `json:"wind"`
 	IconPath string `json:"icon_path"`
+	Links    struct {
+		City string `json:"city"`
+	} `json:"links"`
 }
 
 // WeatherResponce weather response

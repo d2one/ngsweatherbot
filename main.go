@@ -1,11 +1,5 @@
 package main
 
-//TODO кэширование ответов апи новостей, относительно прогноза на 10 минут
-//TODO сделать нотификации пользователям, о выбранной погоде, по времени
-//TODO Сделать вывод выбранного текущего города, и так же в прогнозе
-//TODO Няшные менюшки и вообще навигация
-//TODO start using docopt
-//TODO сделать подробный прогноз и не очень
 import (
 	"flag"
 	"log"
@@ -23,7 +17,7 @@ var ds *DataStore
 var ws *WeatherService
 var debugAPI bool
 var err error
-var cache CacheService
+var cacheService CacheService
 var wi *WeatherIcon
 
 func main() {
@@ -39,9 +33,9 @@ func main() {
 	}
 	ds = NewDataStore()
 	wi = NewWeatherIcon()
-	cache = NewCache()
+	cacheService = NewCache()
 	apiW := NewWeatherAPI()
-	ws = NewWeatherService(cache, apiW)
+	ws = NewWeatherService(cacheService, apiW)
 
 	api := telegram.New(telegramKey)
 	api.Debug(debugAPI)

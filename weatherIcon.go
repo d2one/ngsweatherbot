@@ -9,11 +9,11 @@ func NewWeatherIcon() *WeatherIcon {
 	icons := map[string]map[string]string{
 		"buttons": map[string]string{
 			"back":                 "\xF0\x9F\x94\x99",
-			"default_city":         "\xF0\x9F\x8F\xA2 Установить город",
-			"notifications":        "\xF0\x9F\x94\x94 Уведомления",
+			"default_city":         "\xF0\x9F\x8F\xA4",
+			"notifications":        "\xF0\x9F\x94\x94",
 			"notifications_set":    "\xE2\x8F\xB0",
 			"notifications_remove": "\xE2\x9D\x8C",
-			"settings":             "\xF0\x9F\x94\xA7 Настройки",
+			"settings":             "\xF0\x9F\x94\xA7",
 			"forecast":             "\xF0\x9F\x93\xAF Прогноз",
 			"current":              "\xF0\x9F\x94\x86 Сейчас",
 		},
@@ -29,7 +29,7 @@ func NewWeatherIcon() *WeatherIcon {
 		},
 		"clouds": map[string]string{
 			"sunshine":      "\xF0\x9F\x94\x86",
-			"partly_cloudy": "\xF0\x9F\x8C\x84",
+			"partly_cloudy": "\xE2\x9B\x85",
 			"mostly_cloudy": "\xE2\x9B\x85",
 			"cloudy":        "\xE2\x98\x81",
 			"light_cloudy":  "\xF0\x9F\x8C\x87",
@@ -37,7 +37,7 @@ func NewWeatherIcon() *WeatherIcon {
 		"precipitations": map[string]string{
 			"rain":           "\xE2\x98\x94",
 			"rainlight_rain": "\xE2\x98\x94",
-			"heavy_rain":     "\xE2\x98\x94",
+			"heavy_rain":     "\xE2\x98\x94\xE2\x98\x94",
 			"snow":           "\xE2\x9D\x84",
 			"light_snow":     "\xE2\x9D\x84",
 			"heavy_snow":     "\xE2\x9D\x84",

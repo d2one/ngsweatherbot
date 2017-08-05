@@ -24,6 +24,7 @@ func runNotificationTasks(ctx context.Context, api *telegram.API) error {
 
 		forecast, err := ws.getForecast(userCity.CityAlias)
 		if err != nil {
+			logWork(err)
 			continue
 		}
 		textMessage := userCity.CityTitle + "\n" + ws.formatForecasttWeather(forecast)
