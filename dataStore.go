@@ -38,6 +38,7 @@ func (ds *DataStore) initTables() error {
 		city_alias TEXT,
 		city_title TEXT,
 		notifications_next_run INTEGER NULL,
+		forecast_type CHAR(64) DEFAULT short,
 		created_at INTEGER
 	);
 	CREATE UNIQUE INDEX IF NOT EXISTS chat_id ON user_data (chat_id);
@@ -47,15 +48,8 @@ func (ds *DataStore) initTables() error {
 	return err
 }
 
-func (ds *DataStore) saveUserCity(ChatID int64, city *City) error {
-	sqlAddItem := `
-	INSERT OR REPLACE INTO user_data(
-		chat_id,
-		city_alias,
-		city_title,
-		notifications_next_run,
-		created_at
-	) values(?, ?, ?, (SELECT notifications_next_run FROM user_data WHERE chat_id = ?), strftime('%s', 'now'))`
+func (ds *DataStore) initUser(ChatID int64) error {
+	sqlAddItem := `INSERT OR REPLACE INTO user_data(chat_id, created_at) values(?, strftime('%s', 'now'))`
 
 	stmt, err := ds.DB.Prepare(sqlAddItem)
 	if err != nil {
@@ -63,36 +57,49 @@ func (ds *DataStore) saveUserCity(ChatID int64, city *City) error {
 		return err
 	}
 	defer stmt.Close()
-	_, err = stmt.Exec(ChatID, city.Alias, city.Title, ChatID)
+	_, err = stmt.Exec(ChatID)
+	return err
+}
+
+func (ds *DataStore) setForecastType(ChatID int64, forecastType string) error {
+	sqlAddItem := `UPDATE user_data SET forecast_type = ? WHERE chat_id = ?`
+	log.Println(forecastType)
+	stmt, err := ds.DB.Prepare(sqlAddItem)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	defer stmt.Close()
+	_, err = stmt.Exec(forecastType, ChatID)
+	return err
+}
+
+func (ds *DataStore) saveUserCity(ChatID int64, city *City) error {
+	sqlAddItem := `UPDATE user_data SET city_alias = ?, city_title = ? WHERE chat_id = ?`
+
+	stmt, err := ds.DB.Prepare(sqlAddItem)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	defer stmt.Close()
+	_, err = stmt.Exec(city.Alias, city.Title, ChatID)
 	return err
 }
 
 func (ds *DataStore) saveUserNotification(UserNotification UserNotification) error {
-	sqlAddItem := `
-	INSERT OR REPLACE INTO user_data(
-		chat_id,
-		city_alias,
-		city_title,		
-		notifications_next_run,
-		created_at
-	) values( ?, 
-	(SELECT city_alias FROM user_data WHERE chat_id = ?),
-	(SELECT city_title FROM user_data WHERE chat_id = ?),
-	?, strftime('%s', 'now'))
-	`
+	sqlAddItem := `UPDATE user_data SET notifications_next_run = ? WHERE chat_id = ?`
 	stmt, err := ds.DB.Prepare(sqlAddItem)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
-	_, err = stmt.Exec(UserNotification.ChatID, UserNotification.ChatID, UserNotification.ChatID, UserNotification.NextRun)
+	_, err = stmt.Exec(UserNotification.NextRun, UserNotification.ChatID)
 	return err
 }
 
 func (ds *DataStore) deleteUserNotification(chatID int64) error {
-	sqlAddItem := `
-	UPDATE user_data SET notifications_next_run=NULL WHERE chat_id = ?
-	`
+	sqlAddItem := `UPDATE user_data SET notifications_next_run=NULL WHERE chat_id = ?`
 	stmt, err := ds.DB.Prepare(sqlAddItem)
 	if err != nil {
 		return err
@@ -142,13 +149,13 @@ func (ds *DataStore) getUserNotification(chatID int) (*UserNotification, error) 
 
 func (ds *DataStore) getUserCity(UserID int64) (*UserCity, error) {
 	sqlReadOne := `
-	SELECT chat_id, city_alias, city_title FROM user_data
+	SELECT chat_id, city_alias, city_title,forecast_type FROM user_data
 	WHERE chat_id = ?
 	ORDER BY created_at DESC`
 
 	row := ds.DB.QueryRow(sqlReadOne, UserID)
 	item := new(UserCity)
-	err := row.Scan(&item.ChatID, &item.CityAlias, &item.CityTitle)
+	err := row.Scan(&item.ChatID, &item.CityAlias, &item.CityTitle, &item.ForecastType)
 	switch {
 	case err == sql.ErrNoRows:
 		return nil, nil

@@ -46,7 +46,7 @@ func main() {
 	defer cancel()
 	// Use command middleware, that helps to work with commands
 	bot.Use(telebot.Commands(map[string]telebot.Commander{
-		"start":   telebot.CommandFunc(startCommand),
+		"start":   telebot.CommandFunc(initCommand),
 		"current": telebot.CommandFunc(currentCommand),
 		"help":    telebot.CommandFunc(helpCommand),
 		"city":    telebot.CommandFunc(cityCommand),

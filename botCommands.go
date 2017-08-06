@@ -19,6 +19,17 @@ func startCommand(ctx context.Context, arg string) error {
 	return sendMessage(ctx, update.Chat().ID, "Что будет делать??", getDefaultKeyboard())
 }
 
+func initCommand(ctx context.Context, arg string) error {
+	update := telebot.GetUpdate(ctx)
+	ds.initUser(update.Chat().ID)
+	messageText := fmt.Sprintf(
+		"Привет *%s %s*. Я погодный бот. Ты сможешь получать от меня данные о погоде от pogoda.ngs.ru",
+		update.Chat().FirstName,
+		update.Chat().LastName,
+	)
+	return sendMessage(ctx, update.Chat().ID, messageText, getDefaultKeyboard())
+}
+
 func getDefaultKeyboard() telegram.ReplyMarkup {
 	return buildKeybopard([]string{
 		wi.getButtons("current"),
@@ -78,7 +89,12 @@ func currentCommand(ctx context.Context, arg string) error {
 
 	var replyMarkup = telegram.InlineKeyboardMarkup{}
 	if currentWeather, err := ws.getCurrentWeather(userCity.CityAlias); err == nil {
-		textMessage, replyMarkup = ws.formatCurrentWeather(currentWeather)
+		if userCity.ForecastType == "full" {
+			textMessage, replyMarkup = ws.formatFullCurrentWeather(currentWeather)
+		} else {
+			textMessage, replyMarkup = ws.formatCurrentWeather(currentWeather)
+		}
+
 		textMessage = "*" + userCity.CityTitle + "*\n " + textMessage
 	}
 
@@ -155,6 +171,7 @@ func sendMessage(ctx context.Context, userID int64, textMessage string, markup t
 	api := telebot.GetAPI(ctx) // take api from context
 	msg := telegram.NewMessage(userID, textMessage)
 	msg.ParseMode = "markdown"
+	msg.DisableWebPagePreview = true
 	if markup != nil {
 		msg.ReplyMarkup = markup
 	}
@@ -260,6 +277,12 @@ func defaultCommand(ctx context.Context) error {
 			city := strings.Replace(data, "/city ", "", -1)
 			return cityCommand(ctx, city)
 		}
+		if strings.HasPrefix(data, "/current ") {
+			forecastType := strings.Replace(data, "/current ", "", -1)
+			ds.setForecastType(update.Chat().ID, forecastType)
+			return currentCommand(ctx, "")
+		}
+
 		messageText = update.CallbackQuery.Data
 	}
 

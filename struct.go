@@ -2,9 +2,10 @@ package main
 
 // UserCity user selected city
 type UserCity struct {
-	ChatID    int64
-	CityAlias string
-	CityTitle string
+	ChatID       int64
+	CityAlias    string
+	CityTitle    string
+	ForecastType string
 }
 
 // WeatherSource WeatherSource
@@ -56,7 +57,15 @@ type WeatherCities struct {
 
 // CurrentWeather current weather
 type CurrentWeather struct {
-	Cloud struct {
+	Astronomy struct {
+		LengthDayHuman  string `json:"length_day_human"`
+		MoonIlluminated int    `json:"moon_illuminated"`
+		MoonPhase       string `json:"moon_phase"`
+		Sunrise         string `json:"sunrise"`
+		Sunset          string `json:"sunset"`
+	} `json:"astronomy"`
+	FeelLikeTemperature float64 `json:"feel_like_temperature"`
+	Cloud               struct {
 		Title string `json:"title"`
 		Value string `json:"value"`
 	} `json:"cloud"`
@@ -72,6 +81,16 @@ type CurrentWeather struct {
 		} `json:"direction"`
 		Speed float64 `json:"speed"`
 	} `json:"wind"`
+	Water []struct {
+		Level struct {
+			Hint  string `json:"hint"`
+			Trend int    `json:"trend"`
+			Value int    `json:"value"`
+		} `json:"level"`
+		Temperature interface{} `json:"temperature"`
+		Title       string      `json:"title"`
+		WaveHeight  interface{} `json:"wave_height"`
+	} `json:"water"`
 	IconPath string `json:"icon_path"`
 	Links    struct {
 		City string `json:"city"`

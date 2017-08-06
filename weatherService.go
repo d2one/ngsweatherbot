@@ -63,19 +63,46 @@ func (wc *WeatherService) getForecast(arg string) (*WeatherResponceForecasts, er
 
 func (wc *WeatherService) formatCurrentWeather(weather *CurrentWeather) (string, telegram.InlineKeyboardMarkup) {
 	var inlineKeyboard = [][]telegram.InlineKeyboardButton{}
-	messageText := fmt.Sprintf("%g °C, %s %g м/с, %s %s",
+	messageText := fmt.Sprintf("%g °C, %s %g м/с, %s %s\n [pogoda.ngs.ru](https://pogoda.ngs.ru/%s)",
 		weather.Temperature,
 		wi.getWind(weather.Wind.Direction.Value),
 		weather.Wind.Speed,
 		wi.getClouds(weather.Cloud.Value),
 		wi.getPrecipitations(weather.Precipitation.Value),
+		weather.Links.City,
 	)
 
 	inlineKeyboard = [][]telegram.InlineKeyboardButton{
 		[]telegram.InlineKeyboardButton{
 			telegram.InlineKeyboardButton{
-				Text: "pogoda.ngs.ru",
-				URL:  "https://pogoda.ngs.ru/" + weather.Links.City,
+				Text:         "Подробно",
+				CallbackData: "/current full",
+			},
+		},
+	}
+
+	replyMarkup := telegram.InlineKeyboardMarkup{
+		InlineKeyboard: inlineKeyboard,
+	}
+	return messageText, replyMarkup
+}
+
+func (wc *WeatherService) formatFullCurrentWeather(weather *CurrentWeather) (string, telegram.InlineKeyboardMarkup) {
+	var inlineKeyboard = [][]telegram.InlineKeyboardButton{}
+	messageText := fmt.Sprintf("%g °C, %s %g м/с, %s %s\n [pogoda.ngs.ru](https://pogoda.ngs.ru/%s)",
+		weather.Temperature,
+		wi.getWind(weather.Wind.Direction.Value),
+		weather.Wind.Speed,
+		wi.getClouds(weather.Cloud.Value),
+		wi.getPrecipitations(weather.Precipitation.Value),
+		weather.Links.City,
+	)
+
+	inlineKeyboard = [][]telegram.InlineKeyboardButton{
+		[]telegram.InlineKeyboardButton{
+			telegram.InlineKeyboardButton{
+				Text:         "Кратко",
+				CallbackData: "/current short",
 			},
 		},
 	}
