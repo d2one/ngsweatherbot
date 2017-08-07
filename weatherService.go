@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/bot-api/telegram"
@@ -89,12 +88,16 @@ func (wc *WeatherService) formatCurrentWeather(weather *CurrentWeather) (string,
 
 func (wc *WeatherService) formatFullCurrentWeather(weather *CurrentWeather) (string, telegram.InlineKeyboardMarkup) {
 	var inlineKeyboard = [][]telegram.InlineKeyboardButton{}
-	messageText := fmt.Sprintf("%g °C, %s %g м/с, %s %s\n [pogoda.ngs.ru](https://pogoda.ngs.ru/%s)",
+	messageText := fmt.Sprintf(`*Температура:* %g°C, ощущается как  %g°C.
+*Ветер:* %s %g м/с. 
+%s, %s.
+[pogoda.ngs.ru](https://pogoda.ngs.ru/%s)`,
 		weather.Temperature,
-		wi.getWind(weather.Wind.Direction.Value),
+		weather.FeelLikeTemperature,
+		weather.Wind.Direction.Title,
 		weather.Wind.Speed,
-		wi.getClouds(weather.Cloud.Value),
-		wi.getPrecipitations(weather.Precipitation.Value),
+		weather.Cloud.Title,
+		weather.Precipitation.Title,
 		weather.Links.City,
 	)
 
@@ -153,9 +156,6 @@ func (wc *WeatherService) formatForecasttWeather(weather *WeatherResponceForecas
 }
 
 func formatForecast(hourForecast *HourForecat) string {
-	log.Println(hourForecast.Wind.Direction.Value)
-	log.Println(hourForecast.Wind.Direction.Title)
-
 	return fmt.Sprintf("%v °C, Ветер: %v м/с, %s %s %s \n",
 		hourForecast.Temperature.Avg,
 		hourForecast.Wind.Speed.Avg,

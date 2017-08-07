@@ -61,7 +61,56 @@ func (ds *DataStore) initUser(ChatID int64) error {
 	return err
 }
 
-func (ds *DataStore) setForecastType(ChatID int64, forecastType string) error {
+func (ds *DataStore) getUserData(chatID int64) (*UserData, error) {
+	sqlRead := `SELECT 
+					id, chat_id, city_alias, city_title, notifications_next_run, forecast_type, created_at 
+				FROM user_data 
+				WHERE chat_id = ?`
+
+	row := ds.DB.QueryRow(sqlRead, chatID)
+	userData := &UserData{}
+	err := row.Scan(
+		&userData.ID,
+		&userData.ChatID,
+		&userData.CityAlias,
+		&userData.CityTitle,
+		&userData.NotificationsNextRun,
+		&userData.ForecastType,
+		&userData.CreatedAt,
+	)
+	switch {
+	case err == sql.ErrNoRows:
+		return nil, nil
+	case err != nil:
+		return nil, err
+	}
+	return userData, nil
+}
+
+func (ds *DataStore) saveUserData(userData *UserData) error {
+	sqlAddItem := `
+		INSERT OR REPLACE INTO 
+			user_data
+				(city_alias, city_title, notifications_next_run, forecast_type, created_at) 
+			VALUES (?, ?, ?, ?, strftime('%s', 'now')) 
+		WHERE chat_id = ?`
+	stmt, err := ds.DB.Prepare(sqlAddItem)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	defer stmt.Close()
+	_, err = stmt.Exec(
+		userData.CityAlias,
+		userData.CityTitle,
+		userData.NotificationsNextRun,
+		userData.ForecastType,
+		userData.ChatID,
+	)
+	return err
+}
+
+func (ds *DataStore) saveForecastType(ChatID int64, forecastType string) error {
 	sqlAddItem := `UPDATE user_data SET forecast_type = ? WHERE chat_id = ?`
 	log.Println(forecastType)
 	stmt, err := ds.DB.Prepare(sqlAddItem)
@@ -74,7 +123,7 @@ func (ds *DataStore) setForecastType(ChatID int64, forecastType string) error {
 	return err
 }
 
-func (ds *DataStore) saveUserCity(ChatID int64, city *City) error {
+func (ds *DataStore) saveUserCity(chatID int64, city *City) error {
 	sqlAddItem := `UPDATE user_data SET city_alias = ?, city_title = ? WHERE chat_id = ?`
 
 	stmt, err := ds.DB.Prepare(sqlAddItem)
@@ -83,18 +132,18 @@ func (ds *DataStore) saveUserCity(ChatID int64, city *City) error {
 		return err
 	}
 	defer stmt.Close()
-	_, err = stmt.Exec(city.Alias, city.Title, ChatID)
+	_, err = stmt.Exec(city.Alias, city.Title, chatID)
 	return err
 }
 
-func (ds *DataStore) saveUserNotification(UserNotification UserNotification) error {
+func (ds *DataStore) saveUserNotification(chatID int64, nextRun int64) error {
 	sqlAddItem := `UPDATE user_data SET notifications_next_run = ? WHERE chat_id = ?`
 	stmt, err := ds.DB.Prepare(sqlAddItem)
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
-	_, err = stmt.Exec(UserNotification.NextRun, UserNotification.ChatID)
+	_, err = stmt.Exec(nextRun, chatID)
 	return err
 }
 
@@ -109,59 +158,20 @@ func (ds *DataStore) deleteUserNotification(chatID int64) error {
 	return err
 }
 
-func (ds *DataStore) getCronUserNotification() ([]*UserNotification, error) {
-	sqlRead := `
-	SELECT chat_id, notifications_next_run FROM user_data
-	WHERE notifications_next_run IS NOT NULL AND notifications_next_run <= strftime('%s', 'now')`
-
+func (ds *DataStore) getCronUsersNotifications() ([]*UserData, error) {
+	sqlRead := `SELECT * FROM user_data WHERE notifications_next_run IS NOT NULL AND notifications_next_run <= strftime('%s', 'now')`
 	rows, err := ds.DB.Query(sqlRead)
 	if err != nil {
 		return nil, err
 	}
-	var uns []*UserNotification
+	var uns []*UserData
 	for rows.Next() {
-		un := new(UserNotification)
-		if err := rows.Scan(&un.ChatID, &un.NextRun); err != nil {
+		userData := &UserData{}
+		err := rows.Scan(&userData.ID, &userData.ChatID, &userData.CityAlias, &userData.CityTitle, &userData.NotificationsNextRun, &userData.ForecastType)
+		if err != nil {
 			return nil, err
 		}
-		uns = append(uns, un)
+		uns = append(uns, userData)
 	}
 	return uns, nil
-}
-
-func (ds *DataStore) getUserNotification(chatID int) (*UserNotification, error) {
-	sqlRead := `
-	SELECT chat_id, notifications_next_run FROM user_data
-	WHERE chat_id = ?`
-
-	row := ds.DB.QueryRow(sqlRead, chatID)
-	item := &UserNotification{}
-	err := row.Scan(&item.ChatID, &item.NextRun)
-	switch {
-	case err == sql.ErrNoRows:
-		return nil, nil
-	case err != nil:
-		return nil, err
-	default:
-		return item, nil
-	}
-}
-
-func (ds *DataStore) getUserCity(UserID int64) (*UserCity, error) {
-	sqlReadOne := `
-	SELECT chat_id, city_alias, city_title,forecast_type FROM user_data
-	WHERE chat_id = ?
-	ORDER BY created_at DESC`
-
-	row := ds.DB.QueryRow(sqlReadOne, UserID)
-	item := new(UserCity)
-	err := row.Scan(&item.ChatID, &item.CityAlias, &item.CityTitle, &item.ForecastType)
-	switch {
-	case err == sql.ErrNoRows:
-		return nil, nil
-	case err != nil:
-		return nil, err
-	default:
-		return item, nil
-	}
 }

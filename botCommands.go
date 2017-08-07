@@ -82,20 +82,22 @@ func settingsCommand(ctx context.Context, arg string) error {
 func currentCommand(ctx context.Context, arg string) error {
 	update := telebot.GetUpdate(ctx)
 	textMessage := "Город не выбран. Выберете город в настройках."
-	userCity, err := ds.getUserCity(update.From().ID)
-	if err != nil || userCity == nil {
+	userData, err := ds.getUserData(update.From().ID)
+	if err != nil || !userData.CityAlias.Valid {
+		log.Panicln(err)
+		log.Println(userData)
 		return sendMessage(ctx, update.Chat().ID, textMessage, nil)
 	}
 
 	var replyMarkup = telegram.InlineKeyboardMarkup{}
-	if currentWeather, err := ws.getCurrentWeather(userCity.CityAlias); err == nil {
-		if userCity.ForecastType == "full" {
+	if currentWeather, err := ws.getCurrentWeather(userData.CityAlias.String); err == nil {
+		if userData.ForecastType == "full" {
 			textMessage, replyMarkup = ws.formatFullCurrentWeather(currentWeather)
 		} else {
 			textMessage, replyMarkup = ws.formatCurrentWeather(currentWeather)
 		}
 
-		textMessage = "*" + userCity.CityTitle + "*\n " + textMessage
+		textMessage = "*" + userData.CityTitle.String + "*\n" + textMessage
 	}
 
 	return sendMessage(ctx, update.Chat().ID, textMessage, replyMarkup)
@@ -104,12 +106,12 @@ func currentCommand(ctx context.Context, arg string) error {
 func commandForecast(ctx context.Context, arg string) error {
 	update := telebot.GetUpdate(ctx)
 	textMessage := "Город не выбран. Выберете город в настройках."
-	userCity, err := ds.getUserCity(update.From().ID)
-	if err != nil || userCity == nil {
+	userData, err := ds.getUserData(update.From().ID)
+	if err != nil || !userData.CityAlias.Valid {
 		return sendMessage(ctx, update.Chat().ID, textMessage, nil)
 	}
-	if forecast, err := ws.getForecast(userCity.CityAlias); err == nil {
-		textMessage = userCity.CityTitle + "\n" + ws.formatForecasttWeather(forecast)
+	if forecast, err := ws.getForecast(userData.CityAlias.String); err == nil {
+		textMessage = userData.CityTitle.String + "\n" + ws.formatForecasttWeather(forecast)
 	}
 	return sendMessage(ctx, update.Chat().ID, textMessage, nil)
 }
@@ -136,12 +138,8 @@ func commandSetNotifications(ctx context.Context, arg string) error {
 	if t.Unix() > time.Unix() {
 		time = time.AddDate(0, 0, 1)
 	}
-	un := &UserNotification{
-		UserID:  update.Chat().ID,
-		ChatID:  update.Chat().ID,
-		NextRun: time.Unix(),
-	}
-	if err = ds.saveUserNotification(*un); err != nil {
+
+	if err = ds.saveUserNotification(update.Chat().ID, time.Unix()); err != nil {
 		logWork(err)
 	}
 	cacheService.delete(strconv.Itoa(int(update.Chat().ID)))
@@ -149,10 +147,10 @@ func commandSetNotifications(ctx context.Context, arg string) error {
 }
 
 func commandNotifications(ctx context.Context, userID int64) error {
-	userNotification, _ := ds.getUserNotification(int(userID))
+	userData, _ := ds.getUserData(int64(userID))
 	textMessage := "Уведомления выключены"
-	if userNotification != nil {
-		t := time.Unix(int64(userNotification.NextRun), 0)
+	if userData.NotificationsNextRun.Valid {
+		t := time.Unix(userData.NotificationsNextRun.Int64, 0)
 		textMessage = "У вас включены уведомления: *" + t.Format("15:04") + "*"
 	}
 	keyboard := buildKeybopard([]string{
@@ -279,7 +277,7 @@ func defaultCommand(ctx context.Context) error {
 		}
 		if strings.HasPrefix(data, "/current ") {
 			forecastType := strings.Replace(data, "/current ", "", -1)
-			ds.setForecastType(update.Chat().ID, forecastType)
+			ds.saveForecastType(update.Chat().ID, forecastType)
 			return currentCommand(ctx, "")
 		}
 

@@ -1,5 +1,9 @@
 package main
 
+import (
+	"database/sql"
+)
+
 // UserCity user selected city
 type UserCity struct {
 	ChatID       int64
@@ -14,6 +18,16 @@ type WeatherSource interface {
 	getCity(arg string) (*City, error)
 	getCurrentWeather(arg string) (*CurrentWeather, error)
 	getForecast(arg string) (*WeatherResponceForecasts, error)
+}
+
+type UserData struct {
+	ID                   int64
+	ChatID               int64
+	CityAlias            sql.NullString
+	CityTitle            sql.NullString
+	NotificationsNextRun sql.NullInt64
+	ForecastType         string
+	CreatedAt            int64
 }
 
 // CacheService CacheService
