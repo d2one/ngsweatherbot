@@ -84,8 +84,6 @@ func currentCommand(ctx context.Context, arg string) error {
 	textMessage := "Город не выбран. Выберете город в настройках."
 	userData, err := ds.getUserData(update.From().ID)
 	if err != nil || !userData.CityAlias.Valid {
-		log.Panicln(err)
-		log.Println(userData)
 		return sendMessage(ctx, update.Chat().ID, textMessage, nil)
 	}
 
