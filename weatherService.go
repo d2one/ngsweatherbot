@@ -88,9 +88,12 @@ func (wc *WeatherService) formatCurrentWeather(weather *CurrentWeather) (string,
 
 func (wc *WeatherService) formatFullCurrentWeather(weather *CurrentWeather) (string, telegram.InlineKeyboardMarkup) {
 	var inlineKeyboard = [][]telegram.InlineKeyboardButton{}
+	// strings.Replace(weather.IconPath, "small", "big-icons", -1),
 	messageText := fmt.Sprintf(`*Температура:* %g°C, ощущается как  %g°C.
 *Ветер:* %s %g м/с. 
 %s, %s.
+%s, %s - %s
+%s
 [pogoda.ngs.ru](https://pogoda.ngs.ru/%s)`,
 		weather.Temperature,
 		weather.FeelLikeTemperature,
@@ -98,6 +101,10 @@ func (wc *WeatherService) formatFullCurrentWeather(weather *CurrentWeather) (str
 		weather.Wind.Speed,
 		weather.Cloud.Title,
 		weather.Precipitation.Title,
+		wi.getAstronomy("sunrise")+" "+weather.Astronomy.Sunrise,
+		wi.getAstronomy("sunset")+" "+weather.Astronomy.Sunset,
+		weather.Astronomy.LengthDayHuman,
+		weather.MagneticStatus,
 		weather.Links.City,
 	)
 

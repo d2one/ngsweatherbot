@@ -44,12 +44,22 @@ func NewWeatherIcon() *WeatherIcon {
 			"sleet":          "\xE2\x9D\x84",
 			"thunderstorm":   "\xE2\x9A\xA1",
 		},
+		"astronomy": map[string]string{
+			"sunrise": "\xF0\x9F\x8C\x85",
+			"sunset":  "\xF0\x9F\x8C\x87",
+		},
 	}
 	return &WeatherIcon{
 		icons: icons,
 	}
 }
-
+func (wi *WeatherIcon) getAstronomy(key string) string {
+	icon, ok := wi.icons["astronomy"][key]
+	if ok {
+		return icon
+	}
+	return ""
+}
 func (wi *WeatherIcon) getWind(key string) string {
 	icon, ok := wi.icons["wind"][key]
 	if ok {

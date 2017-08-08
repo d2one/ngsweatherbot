@@ -78,6 +78,7 @@ type CurrentWeather struct {
 		Sunrise         string `json:"sunrise"`
 		Sunset          string `json:"sunset"`
 	} `json:"astronomy"`
+	MagneticStatus      string  `json:"magnetic_status"`
 	FeelLikeTemperature float64 `json:"feel_like_temperature"`
 	Cloud               struct {
 		Title string `json:"title"`

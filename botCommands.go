@@ -210,7 +210,6 @@ func buildInlineCityKeyboard(ctx context.Context, cities []*City, callback strin
 			},
 		)
 		log.Println(callback + city.Title)
-		// TODO проверку на количество
 		if (index+1)%3 == 0 {
 			keyboardText = append(keyboardText, keyboardRow)
 			keyboardRow = []telegram.InlineKeyboardButton{}
@@ -275,6 +274,12 @@ func defaultCommand(ctx context.Context) error {
 		}
 		if strings.HasPrefix(data, "/current ") {
 			forecastType := strings.Replace(data, "/current ", "", -1)
+			ds.saveForecastType(update.Chat().ID, forecastType)
+			return currentCommand(ctx, "")
+		}
+
+		if strings.HasPrefix(data, "/forecast ") {
+			forecastType := strings.Replace(data, "/forecast ", "", -1)
 			ds.saveForecastType(update.Chat().ID, forecastType)
 			return currentCommand(ctx, "")
 		}
