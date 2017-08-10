@@ -13,12 +13,12 @@ import (
 	"github.com/bot-api/telegram/telebot"
 )
 
-var ds *DataStore
-var ws *WeatherService
+var dataStore *DataStore
+var weatherService *WeatherService
 var debugAPI bool
 var err error
 var cacheService CacheService
-var wi *WeatherIcon
+var weatherIcons *WeatherIcons
 
 func main() {
 	var telegramKey string
@@ -31,11 +31,10 @@ func main() {
 		log.Println("Secret telegram key not setted")
 		os.Exit(1)
 	}
-	ds = NewDataStore()
-	wi = NewWeatherIcon()
+	dataStore = NewDataStore()
+	weatherIcons = NewWeatherIcons()
 	cacheService = NewCache()
-	apiW := NewWeatherAPI()
-	ws = NewWeatherService(cacheService, apiW)
+	weatherService = NewWeatherService(cacheService)
 
 	api := telegram.New(telegramKey)
 	api.Debug(debugAPI)
@@ -50,6 +49,12 @@ func main() {
 		"current": telebot.CommandFunc(currentCommand),
 		"help":    telebot.CommandFunc(helpCommand),
 		"city":    telebot.CommandFunc(cityCommand),
+	}))
+
+	bot.Use(telebot.Callbacks(map[string]telebot.InlineCallback{
+		"/city":                     telebot.CallbackFunc(cityCommand),
+		"/show_city":                telebot.CallbackFunc(currentCommand),
+		"/weather_forecast_current": telebot.CallbackFunc(callbackWeatherType),
 	}))
 	go runCronCommands(netCtx, api)
 	log.Fatal(bot.Serve(netCtx))

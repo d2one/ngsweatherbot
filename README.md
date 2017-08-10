@@ -10,3 +10,12 @@ TODO start using docopt
 
 TODO сделать подробный прогноз и не очень
 
+"golang.org/x/net/context" - context
+
+DB -> db. С маленькой буквы - private
+
+sql -> ""
+
+название пакета -> cache
+
+import alias github...

@@ -17,7 +17,7 @@ type WeatherSource interface {
 	getCities(arg string) ([]*City, error)
 	getCity(arg string) (*City, error)
 	getCurrentWeather(arg string) (*CurrentWeather, error)
-	getForecast(arg string) (*WeatherResponceForecasts, error)
+	getForecast(arg string) (*WeatherResponseForecasts, error)
 }
 
 type UserData struct {
@@ -112,12 +112,12 @@ type CurrentWeather struct {
 	} `json:"links"`
 }
 
-// WeatherResponce weather response
-type WeatherResponce struct {
+// WeatherResponse weather response
+type WeatherResponse struct {
 	Forecasts []*CurrentWeather `json:"forecasts"`
 }
 
-type HourForecat struct {
+type HourForecast struct {
 	Hour        int `json:"hour"`
 	Temperature struct {
 		Avg float64 `json:"avg"`
@@ -141,9 +141,9 @@ type HourForecat struct {
 	} `json:"precipitation"`
 }
 
-type WeatherResponceForecasts struct {
+type WeatherResponseForecasts struct {
 	Forecasts []struct {
 		Date  string         `json:"date"`
-		Hours []*HourForecat `json:"hours"`
+		Hours []*HourForecast `json:"hours"`
 	} `json:"forecasts"`
 }

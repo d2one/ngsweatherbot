@@ -15,10 +15,10 @@ type WeatherService struct {
 }
 
 // NewWeatherService WeatherService
-func NewWeatherService(cache CacheService, weatherSource WeatherSource) *WeatherService {
+func NewWeatherService(cache CacheService) *WeatherService {
 	return &WeatherService{
 		cache:         cache,
-		weatherSource: weatherSource,
+		weatherSource: NewWeatherAPI(),
 	}
 }
 
@@ -45,9 +45,9 @@ func (wc *WeatherService) getCurrentWeather(arg string) (*CurrentWeather, error)
 	return nil, nil
 }
 
-func (wc *WeatherService) getForecast(arg string) (*WeatherResponceForecasts, error) {
+func (wc *WeatherService) getForecast(arg string) (*WeatherResponseForecasts, error) {
 	if cachedForecast, _ := wc.cache.read("forecast_weather" + arg); cachedForecast != nil {
-		forecast := &WeatherResponceForecasts{}
+		forecast := &WeatherResponseForecasts{}
 		json.Unmarshal([]byte(cachedForecast.CacheValue), &forecast)
 		return forecast, nil
 	}
@@ -64,18 +64,18 @@ func (wc *WeatherService) formatCurrentWeather(weather *CurrentWeather) (string,
 	var inlineKeyboard = [][]telegram.InlineKeyboardButton{}
 	messageText := fmt.Sprintf("%g °C, %s %g м/с, %s %s\n [pogoda.ngs.ru](https://pogoda.ngs.ru/%s)",
 		weather.Temperature,
-		wi.getWind(weather.Wind.Direction.Value),
+		weatherIcons.getWind(weather.Wind.Direction.Value),
 		weather.Wind.Speed,
-		wi.getClouds(weather.Cloud.Value),
-		wi.getPrecipitations(weather.Precipitation.Value),
+		weatherIcons.getClouds(weather.Cloud.Value),
+		weatherIcons.getPrecipitations(weather.Precipitation.Value),
 		weather.Links.City,
 	)
 
 	inlineKeyboard = [][]telegram.InlineKeyboardButton{
-		[]telegram.InlineKeyboardButton{
-			telegram.InlineKeyboardButton{
+		{
+			{
 				Text:         "Подробно",
-				CallbackData: "/current full",
+				CallbackData: "/weather_forecast_current:full",
 			},
 		},
 	}
@@ -101,18 +101,18 @@ func (wc *WeatherService) formatFullCurrentWeather(weather *CurrentWeather) (str
 		weather.Wind.Speed,
 		weather.Cloud.Title,
 		weather.Precipitation.Title,
-		wi.getAstronomy("sunrise")+" "+weather.Astronomy.Sunrise,
-		wi.getAstronomy("sunset")+" "+weather.Astronomy.Sunset,
+		weatherIcons.getAstronomy("sunrise")+" "+weather.Astronomy.Sunrise,
+		weatherIcons.getAstronomy("sunset")+" "+weather.Astronomy.Sunset,
 		weather.Astronomy.LengthDayHuman,
 		weather.MagneticStatus,
 		weather.Links.City,
 	)
 
 	inlineKeyboard = [][]telegram.InlineKeyboardButton{
-		[]telegram.InlineKeyboardButton{
-			telegram.InlineKeyboardButton{
+		{
+			{
 				Text:         "Кратко",
-				CallbackData: "/current short",
+				CallbackData: "/weather_forecast_current:short",
 			},
 		},
 	}
@@ -123,7 +123,7 @@ func (wc *WeatherService) formatFullCurrentWeather(weather *CurrentWeather) (str
 	return messageText, replyMarkup
 }
 
-func (wc *WeatherService) formatForecasttWeather(weather *WeatherResponceForecasts) string {
+func (wc *WeatherService) formatForecasttWeather(weather *WeatherResponseForecasts) string {
 	messageText := ""
 	t := time.Now()
 	h := t.Hour()
@@ -162,12 +162,12 @@ func (wc *WeatherService) formatForecasttWeather(weather *WeatherResponceForecas
 	return messageText
 }
 
-func formatForecast(hourForecast *HourForecat) string {
+func formatForecast(hourForecast *HourForecast) string {
 	return fmt.Sprintf("%v °C, Ветер: %v м/с, %s %s %s \n",
 		hourForecast.Temperature.Avg,
 		hourForecast.Wind.Speed.Avg,
-		wi.getWind(hourForecast.Wind.Direction.Value),
-		wi.getClouds(hourForecast.Cloud.Value),
-		wi.getPrecipitations(hourForecast.Precipitation.Value),
+		weatherIcons.getWind(hourForecast.Wind.Direction.Value),
+		weatherIcons.getClouds(hourForecast.Cloud.Value),
+		weatherIcons.getPrecipitations(hourForecast.Precipitation.Value),
 	)
 }

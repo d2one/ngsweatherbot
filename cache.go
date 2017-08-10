@@ -3,24 +3,24 @@ package main
 import (
 	"time"
 
-	"github.com/patrickmn/go-cache"
+	inMemoryCache "github.com/patrickmn/go-cache"
 )
 
 // Cache *DB
-type InmemoryCache struct {
-	c *cache.Cache
+type Cache struct {
+	c *inMemoryCache.Cache
 }
 
 // Cache Cache
-func NewCache() *InmemoryCache {
-	c := cache.New(10*time.Minute, 15*time.Minute)
-	return &InmemoryCache{
+func NewCache() *Cache {
+	c := inMemoryCache.New(10*time.Minute, 15*time.Minute)
+	return &Cache{
 		c: c,
 	}
 }
 
-func (inmemoryCache *InmemoryCache) read(cacheKey string) (*CachedItem, error) {
-	if cacheValue, found := inmemoryCache.c.Get(cacheKey); found {
+func (cache *Cache) read(cacheKey string) (*CachedItem, error) {
+	if cacheValue, found := cache.c.Get(cacheKey); found {
 		cachedItem := &CachedItem{
 			CacheKey:   cacheKey,
 			CacheValue: cacheValue.(string),
@@ -30,12 +30,12 @@ func (inmemoryCache *InmemoryCache) read(cacheKey string) (*CachedItem, error) {
 	return nil, nil
 }
 
-func (inmemoryCache *InmemoryCache) write(cacheKey string, cacheValue string, ttl int64) error {
-	inmemoryCache.c.Set(cacheKey, cacheValue, cache.DefaultExpiration)
+func (cache *Cache) write(cacheKey string, cacheValue string, ttl int64) error {
+	cache.c.Set(cacheKey, cacheValue, inMemoryCache.DefaultExpiration)
 	return nil
 }
 
-func (inmemoryCache *InmemoryCache) delete(cacheKey string) error {
-	inmemoryCache.c.Delete(cacheKey)
+func (cache *Cache) delete(cacheKey string) error {
+	cache.c.Delete(cacheKey)
 	return nil
 }
