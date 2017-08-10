@@ -15,16 +15,16 @@ import (
 
 var dataStore *DataStore
 var weatherService *WeatherService
+var cacheService *Cache
+var weatherIcons *WeatherIcons
 var debugAPI bool
 var err error
-var cacheService CacheService
-var weatherIcons *WeatherIcons
 
 func main() {
 	var telegramKey string
 
 	//TODO rebuild on env params
-	flag.StringVar(&telegramKey, "k", "", "sekret telegram api key")
+	flag.StringVar(&telegramKey, "k", "", "secret telegram api key")
 	flag.BoolVar(&debugAPI, "d", false, "enable api debug mode")
 	flag.Parse()
 	if telegramKey == "" {

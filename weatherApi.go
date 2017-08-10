@@ -44,23 +44,23 @@ func (weatherApi *WeatherAPI) getCity(arg string) (*City, error) {
 }
 
 func (weatherApi *WeatherAPI) getCurrentWeather(arg string) (*CurrentWeather, error) {
-	var weather = &WeatherResponse{}
-	err := weatherApi.getDataByURL("/api/v1/forecasts/current?city="+arg, weather)
+	var weatherResponse = &WeatherResponse{}
+	err := weatherApi.getDataByURL("/api/v1/forecasts/current?city="+arg, weatherResponse)
 	if err != nil {
 		return nil, err
 	}
 
-	return weather.Forecasts[0], nil
+	return weatherResponse.Forecasts[0], nil
 }
 
 func (weatherApi *WeatherAPI) getForecast(arg string) (*WeatherResponseForecasts, error) {
 
-	var weather = &WeatherResponseForecasts{}
-	err := weatherApi.getDataByURL("/api/v1/forecasts/forecast?city="+arg, weather)
+	var weatherResponseForecasts = &WeatherResponseForecasts{}
+	err := weatherApi.getDataByURL("/api/v1/forecasts/forecast?city="+arg, weatherResponseForecasts)
 	if err != nil {
 		return nil, err
 	}
-	return weather, nil
+	return weatherResponseForecasts, nil
 }
 
 func (weatherApi *WeatherAPI) getDataByURL(url string, structToParse interface{}) error {

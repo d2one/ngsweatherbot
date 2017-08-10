@@ -8,7 +8,6 @@ import (
 )
 
 func runNotificationTasks(ctx context.Context, api *telegram.API) error {
-	log.Println("start job")
 	usersData, err := dataStore.getCronUsersNotifications()
 	if err != nil {
 		logWork(err)
