@@ -3,17 +3,17 @@ package main
 import (
 	"time"
 
-	inMemoryCache "github.com/patrickmn/go-cache"
+	mCache "github.com/patrickmn/go-cache"
 )
 
 // Cache *DB
 type Cache struct {
-	c *inMemoryCache.Cache
+	c *mCache.Cache
 }
 
 // Cache Cache
 func NewCache() *Cache {
-	c := inMemoryCache.New(10*time.Minute, 15*time.Minute)
+	c := mCache.New(10*time.Minute, 15*time.Minute)
 	return &Cache{
 		c: c,
 	}
@@ -31,7 +31,7 @@ func (cache *Cache) read(cacheKey string) (*CachedItem, error) {
 }
 
 func (cache *Cache) write(cacheKey string, cacheValue string, ttl int64) error {
-	cache.c.Set(cacheKey, cacheValue, inMemoryCache.DefaultExpiration)
+	cache.c.Set(cacheKey, cacheValue, mCache.DefaultExpiration)
 	return nil
 }
 
