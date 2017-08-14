@@ -92,13 +92,9 @@ func (service *WeatherService) formatCurrentWeather(weather *CurrentWeather) (st
 
 func (service *WeatherService) formatFullCurrentWeather(weather *CurrentWeather) (string, telegram.InlineKeyboardMarkup) {
 	var inlineKeyboard = [][]telegram.InlineKeyboardButton{}
-	// strings.Replace(weather.IconPath, "small", "big-icons", -1),
-	messageText := fmt.Sprintf(`*Температура:* %g°C, ощущается как  %g°C.
-*Ветер:* %s %g м/с. 
-%s, %s.
-%s, %s - %s
-%s
-[pogoda.ngs.ru](https://pogoda.ngs.ru/%s)`,
+	messageText := fmt.Sprintf("*Температура:* %g°C, ощущается как  %g°C. "+
+		"*Ветер:* %s %g м/с. %s, %s. \n %s, %s - %s \n %s "+
+		"[pogoda.ngs.ru](https://pogoda.ngs.ru/%s)",
 		weather.Temperature,
 		weather.FeelLikeTemperature,
 		weather.Wind.Direction.Title,
@@ -132,12 +128,16 @@ func (service *WeatherService) formatForecastWeather(weather *WeatherResponseFor
 	t := time.Now()
 	h := t.Hour()
 	counter := 0
+	cityAlias := ""
 	for indexForecast, forecast := range weather.Forecasts {
-
-		if indexForecast > 1 || counter > 1 {
+		cityAlias = forecast.Links.City
+		if indexForecast > 3 {
 			break
 		}
-
+		if indexForecast > 0 {
+			t, _ := time.Parse("2006-01-02T15:04:05-0700", forecast.Date)
+			messageText = messageText + "\n*" + t.Format("2 Jan") + "*\n"
+		}
 		for _, hourForecast := range forecast.Hours {
 			if hourForecast.Hour < h && indexForecast < 1 {
 				continue
@@ -148,9 +148,6 @@ func (service *WeatherService) formatForecastWeather(weather *WeatherResponseFor
 				messageText = messageText + "*Ночью:* " + formatForecast(hourForecast)
 				continue
 			case 6:
-				if indexForecast > 0 {
-					messageText = messageText + "Завтра: \n"
-				}
 				messageText = messageText + "*Утром:* " + formatForecast(hourForecast)
 				continue
 			case 12:
@@ -161,8 +158,8 @@ func (service *WeatherService) formatForecastWeather(weather *WeatherResponseFor
 				continue
 			}
 		}
-
 	}
+	messageText = messageText + fmt.Sprintf("\n[pogoda.ngs.ru](https://pogoda.ngs.ru/%s)", cityAlias)
 	return messageText
 }
 

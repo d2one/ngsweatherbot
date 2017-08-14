@@ -143,7 +143,10 @@ type HourForecast struct {
 
 type WeatherResponseForecasts struct {
 	Forecasts []struct {
-		Date  string         `json:"date"`
+		Date  string          `json:"date"`
 		Hours []*HourForecast `json:"hours"`
+		Links struct {
+			City string `json:"city"`
+		} `json:"links"`
 	} `json:"forecasts"`
 }
