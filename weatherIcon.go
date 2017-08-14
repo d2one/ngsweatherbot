@@ -27,7 +27,7 @@ func NewWeatherIcons() *WeatherIcons {
 			"south":      "\xE2\x9E\xA1",
 			"west":       "\xE2\xAC\x85",
 		},
-		"weatherIcons": {
+		"icons": {
 			"north_west": "\xE2\x86\x96",
 			"north_east": "\xE2\x86\x97",
 			"south_west": "\xE2\x86\x99",
@@ -64,26 +64,44 @@ func NewWeatherIcons() *WeatherIcons {
 	}
 }
 
-func (weatherIcons *WeatherIcons) getWind(key string) string {
-	return weatherIcons.icons["wind"][key]
+func (icons *WeatherIcons) getWind(key string) string {
+	if val, ok := icons.icons["wind"][key]; ok {
+		return val
+	}
+	return ""
 }
 
-func (weatherIcons *WeatherIcons) getAstronomy(key string) string {
-	return weatherIcons.icons["astronomy"][key]
+func (icons *WeatherIcons) getAstronomy(key string) string {
+	if val, ok := icons.icons["astronomy"][key]; ok {
+		return val
+	}
+	return ""
 }
 
-func (weatherIcons *WeatherIcons) getweatherIconsnd(key string) string {
-	return weatherIcons.icons["weatherIconsnd"][key]
+func (icons *WeatherIcons) getWeatherIcons(key string) string {
+	if val, ok := icons.icons["icons"][key]; ok {
+		return val
+	}
+	return ""
 }
 
-func (weatherIcons *WeatherIcons) getClouds(key string) string {
-	return weatherIcons.icons["clouds"][key]
+func (icons *WeatherIcons) getClouds(key string) string {
+	if val, ok := icons.icons["clouds"][key]; ok {
+		return val
+	}
+	return ""
 }
 
-func (weatherIcons *WeatherIcons) getPrecipitations(key string) string {
-	return weatherIcons.icons["precipitations"][key]
+func (icons *WeatherIcons) getPrecipitations(key string) string {
+	if val, ok := icons.icons["precipitations"][key]; ok {
+		return val
+	}
+	return ""
 }
 
-func (weatherIcons *WeatherIcons) getButtons(key string) string {
-	return weatherIcons.icons["buttons"][key]
+func (icons *WeatherIcons) getButtons(key string) string {
+	if val, ok := icons.icons["buttons"][key]; ok {
+		return val
+	}
+	return ""
 }

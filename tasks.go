@@ -1,10 +1,8 @@
 package main
 
 import (
-	"log"
-
+	"context"
 	"github.com/bot-api/telegram"
-	"golang.org/x/net/context"
 )
 
 func runNotificationTasks(ctx context.Context, api *telegram.API) error {
@@ -22,10 +20,9 @@ func runNotificationTasks(ctx context.Context, api *telegram.API) error {
 
 		forecast, err := weatherService.getForecast(userData.CityAlias.String)
 		if err != nil {
-			logWork(err)
 			continue
 		}
-		textMessage := userData.CityTitle.String + "\n" + weatherService.formatForecasttWeather(forecast)
+		textMessage := userData.CityTitle.String + "\n" + weatherService.formatForecastWeather(forecast)
 		msg := telegram.NewMessage(userData.ChatID, textMessage)
 		msg.ParseMode = "markdown"
 		if _, err := api.Send(ctx, msg); err != nil {

@@ -17,54 +17,59 @@ func NewWeatherAPI() *WeatherAPI {
 	return &WeatherAPI{URL: "https://pogoda.ngs.ru"}
 }
 
-func (weatherApi *WeatherAPI) getCities(arg string) ([]*City, error) {
-	if len(arg) == 0 {
+func (api *WeatherAPI) getCities(city string) ([]*City, error) {
+	if len(city) == 0 {
 		return nil, errors.New("пустой город")
 	}
-
-	var city = &WeatherCities{}
-	err = weatherApi.getDataByURL("/api/v1/cities?q="+arg, city)
+	var weatherCities WeatherCities
+	err = api.fetchStruct("/api/v1/cities?q="+city, &weatherCities)
 	if err != nil {
 		return nil, err
 	}
 
-	if city.Errors.Message != "" {
-		return nil, errors.New(city.Errors.Message)
+	if weatherCities.Errors.Message != "" {
+		return nil, errors.New(weatherCities.Errors.Message)
 	}
-	return city.Cities, nil
+	return weatherCities.Cities, nil
 }
 
-func (weatherApi *WeatherAPI) getCity(arg string) (*City, error) {
-	cities, err := weatherApi.getCities(arg)
+func (api *WeatherAPI) getCity(city string) (*City, error) {
+	cities, err := api.getCities(city)
 	if err != nil {
 		return nil, err
+	}
+	if len(cities) == 0 {
+		return nil, nil
 	}
 	return cities[0], nil
 
 }
 
-func (weatherApi *WeatherAPI) getCurrentWeather(arg string) (*CurrentWeather, error) {
-	var weatherResponse = &WeatherResponse{}
-	err := weatherApi.getDataByURL("/api/v1/forecasts/current?city="+arg, weatherResponse)
+func (api *WeatherAPI) getCurrentWeather(arg string) (*CurrentWeather, error) {
+	var weatherResponse WeatherResponse
+	err := api.fetchStruct("/api/v1/forecasts/current?city="+arg, &weatherResponse)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(weatherResponse.Forecasts) == 0 {
+		return nil, nil
 	}
 
 	return weatherResponse.Forecasts[0], nil
 }
 
-func (weatherApi *WeatherAPI) getForecast(arg string) (*WeatherResponseForecasts, error) {
-
-	var weatherResponseForecasts = &WeatherResponseForecasts{}
-	err := weatherApi.getDataByURL("/api/v1/forecasts/forecast?city="+arg, weatherResponseForecasts)
+func (api *WeatherAPI) getForecast(arg string) (*WeatherResponseForecasts, error) {
+	var weatherResponseForecasts WeatherResponseForecasts
+	err := api.fetchStruct("/api/v1/forecasts/forecast?city="+arg, &weatherResponseForecasts)
 	if err != nil {
 		return nil, err
 	}
-	return weatherResponseForecasts, nil
+	return &weatherResponseForecasts, nil
 }
 
-func (weatherApi *WeatherAPI) getDataByURL(url string, structToParse interface{}) error {
-	resp, err := http.Get(weatherApi.URL + url)
+func (api *WeatherAPI) fetchStruct(url string, structToParse interface{}) error {
+	resp, err := http.Get(api.URL + url)
 	if err != nil {
 		return err
 	}

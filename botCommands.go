@@ -8,8 +8,9 @@ import (
 
 	"golang.org/x/net/context"
 
-	"strconv"
+	strconv "strconv"
 
+	"encoding/json"
 	"github.com/bot-api/telegram"
 	"github.com/bot-api/telegram/telebot"
 )
@@ -31,7 +32,7 @@ func initCommand(ctx context.Context, arg string) error {
 }
 
 func getDefaultKeyboard() telegram.ReplyMarkup {
-	return buildKeybopard([]string{
+	return buildKeyboard([]string{
 		weatherIcons.getButtons("current"),
 		weatherIcons.getButtons("forecast"),
 		weatherIcons.getButtons("settings"),
@@ -39,14 +40,14 @@ func getDefaultKeyboard() telegram.ReplyMarkup {
 }
 
 func getSettingKeyboard() telegram.ReplyMarkup {
-	return buildKeybopard([]string{
+	return buildKeyboard([]string{
 		weatherIcons.getButtons("default_city"),
 		weatherIcons.getButtons("notifications"),
 		weatherIcons.getButtons("back"),
 	}, 3, false)
 }
 
-func buildKeybopard(menu []string, rows int, oneTimeKeyboard bool) telegram.ReplyKeyboardMarkup {
+func buildKeyboard(menu []string, rows int, oneTimeKeyboard bool) telegram.ReplyKeyboardMarkup {
 	var keyboard = [][]string{}
 	var keyboardRow = []string{}
 
@@ -81,24 +82,31 @@ func settingsCommand(ctx context.Context, arg string) error {
 
 func currentCommand(ctx context.Context, arg string) error {
 	update := telebot.GetUpdate(ctx)
-	textMessage := "Город не выбран. Выберете город в настройках."
 	userData, err := dataStore.getUserData(update.From().ID)
 	if err != nil || !userData.CityAlias.Valid {
-		return sendMessage(ctx, update.Chat().ID, textMessage, nil)
+		return sendMessage(ctx, update.Chat().ID, "Город не выбран. Выберете город в настройках.", nil)
 	}
+	city := &City{
+		Alias: userData.CityAlias.String,
+		Title: userData.CityTitle.String,
+	}
+	textMessage, replyMarkup := currentWeather(city, userData.ForecastType)
+	return sendMessage(ctx, update.Chat().ID, textMessage, replyMarkup)
+}
 
-	var replyMarkup = telegram.InlineKeyboardMarkup{}
-	if currentWeather, err := weatherService.getCurrentWeather(userData.CityAlias.String); err == nil {
-		if userData.ForecastType == "full" {
+func currentWeather(city *City, forecastType string) (string, telegram.InlineKeyboardMarkup) {
+	var replyMarkup telegram.InlineKeyboardMarkup
+	var textMessage string
+	if currentWeather, err := weatherService.getCurrentWeather(city.Alias); err == nil {
+		log.Println(currentWeather)
+		if forecastType == "full" {
 			textMessage, replyMarkup = weatherService.formatFullCurrentWeather(currentWeather)
 		} else {
 			textMessage, replyMarkup = weatherService.formatCurrentWeather(currentWeather)
 		}
-
-		textMessage = "*" + userData.CityTitle.String + "*\n" + textMessage
 	}
-
-	return sendMessage(ctx, update.Chat().ID, textMessage, replyMarkup)
+	textMessage = "*" + city.Title + "*\n" + textMessage
+	return textMessage, replyMarkup
 }
 
 func commandForecast(ctx context.Context, arg string) error {
@@ -109,7 +117,7 @@ func commandForecast(ctx context.Context, arg string) error {
 		return sendMessage(ctx, update.Chat().ID, textMessage, nil)
 	}
 	if forecast, err := weatherService.getForecast(userData.CityAlias.String); err == nil {
-		textMessage = userData.CityTitle.String + "\n" + weatherService.formatForecasttWeather(forecast)
+		textMessage = userData.CityTitle.String + "\n" + weatherService.formatForecastWeather(forecast)
 	}
 	return sendMessage(ctx, update.Chat().ID, textMessage, nil)
 }
@@ -131,17 +139,17 @@ func commandSetNotifications(ctx context.Context, arg string) error {
 	if err != nil {
 		return sendMessage(ctx, update.Chat().ID, "Неверный формат времени", nil)
 	}
-	time := time.Date(t.Year(), t.Month(), t.Day(), hours, minutes, int(0), int(0), time.Local)
+	notificationTime := time.Date(t.Year(), t.Month(), t.Day(), hours, minutes, int(0), int(0), time.Local)
 
-	if t.Unix() > time.Unix() {
-		time = time.AddDate(0, 0, 1)
+	if t.Unix() > notificationTime.Unix() {
+		notificationTime = notificationTime.AddDate(0, 0, 1)
 	}
 
-	if err = dataStore.saveUserNotification(update.Chat().ID, time.Unix()); err != nil {
+	if err = dataStore.saveUserNotification(update.Chat().ID, notificationTime.Unix()); err != nil {
 		logWork(err)
 	}
-	cacheService.delete(strconv.Itoa(int(update.Chat().ID)))
-	return sendMessage(ctx, update.Chat().ID, "Установлено: "+time.Format("15:04"), getDefaultKeyboard())
+	cache.delete(strconv.Itoa(int(update.Chat().ID)))
+	return sendMessage(ctx, update.Chat().ID, "Установлено: "+notificationTime.Format("15:04"), getDefaultKeyboard())
 }
 
 func commandNotifications(ctx context.Context, userID int64) error {
@@ -151,7 +159,7 @@ func commandNotifications(ctx context.Context, userID int64) error {
 		t := time.Unix(userData.NotificationsNextRun.Int64, 0)
 		textMessage = "У вас включены уведомления: *" + t.Format("15:04") + "*"
 	}
-	keyboard := buildKeybopard([]string{
+	keyboard := buildKeyboard([]string{
 		weatherIcons.getButtons("notifications_set"),
 		weatherIcons.getButtons("notifications_remove"),
 		weatherIcons.getButtons("back"),
@@ -234,12 +242,12 @@ func runMenuCommand(ctx context.Context, commandText string) (error, bool) {
 	case weatherIcons.getButtons("settings"):
 		return settingsCommand(ctx, ""), true
 	case weatherIcons.getButtons("default_city"):
-		cacheService.write(strconv.Itoa(int(update.Chat().ID)), "default_city", time.Now().Unix()+60*10)
+		cache.write(strconv.Itoa(int(update.Chat().ID)), "default_city", time.Now().Unix()+60*10)
 		return sendMessage(ctx, update.Chat().ID, "Введите город по умолчанию:", nil), true
 	case weatherIcons.getButtons("forecast"):
 		return commandForecast(ctx, ""), true
 	case weatherIcons.getButtons("notifications_set"):
-		cacheService.write(strconv.Itoa(int(update.Chat().ID)), "notification_user", time.Now().Unix()+60*10)
+		cache.write(strconv.Itoa(int(update.Chat().ID)), "notification_user", time.Now().Unix()+60*10)
 		return sendMessage(ctx, update.Chat().ID, "Введите время", nil), true
 	case weatherIcons.getButtons("notifications_remove"):
 		dataStore.deleteUserNotification(update.Chat().ID)
@@ -247,14 +255,14 @@ func runMenuCommand(ctx context.Context, commandText string) (error, bool) {
 	case weatherIcons.getButtons("notifications"):
 		return commandNotifications(ctx, update.Chat().ID), true
 	case weatherIcons.getButtons("back"):
-		cacheService.delete(strconv.Itoa(int(update.Chat().ID)))
+		cache.delete(strconv.Itoa(int(update.Chat().ID)))
 		return startCommand(ctx, ""), true
 	}
 
-	if lastCommand, _ := cacheService.read(strconv.Itoa(int(update.Chat().ID))); lastCommand != nil {
+	if lastCommand, _ := cache.read(strconv.Itoa(int(update.Chat().ID))); lastCommand != nil {
 		switch lastCommand.CacheValue {
 		case "default_city":
-			cacheService.delete(strconv.Itoa(int(update.Chat().ID)))
+			cache.delete(strconv.Itoa(int(update.Chat().ID)))
 			return cityCommand(ctx, update.Message.Text), true
 		case "notification_user":
 			return commandSetNotifications(ctx, update.Message.Text), true
@@ -263,9 +271,16 @@ func runMenuCommand(ctx context.Context, commandText string) (error, bool) {
 	return nil, false
 }
 
-func callbackWeatherType(ctx context.Context, arg string) error {
+func callbackWeatherType(ctx context.Context, forecastType string) error {
 	update := telebot.GetUpdate(ctx) // take update from context
-	dataStore.saveForecastType(update.Chat().ID, arg)
+	dataStore.saveForecastType(update.Chat().ID, forecastType)
+	if cityData, _ := cache.read("last_city" + strconv.Itoa(int(update.Chat().ID))); cityData != nil {
+		var city = &City{}
+		json.Unmarshal([]byte(cityData.CacheValue), &city)
+		textMessage, replyMarkup := currentWeather(city, forecastType)
+		return sendMessage(ctx, update.Chat().ID, textMessage, replyMarkup)
+	}
+
 	return currentCommand(ctx, "")
 }
 
@@ -292,13 +307,10 @@ func defaultCommand(ctx context.Context) error {
 		return buildInlineCityKeyboard(ctx, cities, "/show_city:")
 	}
 	city := cities[0]
-	log.Println(city.Alias)
-	textMessage := "Не удалось получить текущую погоду. Попробуйте позже"
-	var replyMarkup = telegram.InlineKeyboardMarkup{}
-	if currentWeather, err := weatherService.getCurrentWeather(city.Alias); err == nil {
-		textMessage, replyMarkup = weatherService.formatCurrentWeather(currentWeather)
-		textMessage = "*" + city.Title + "*\n " + textMessage
-	}
+	userData, err := dataStore.getUserData(update.From().ID)
+	textMessage, replyMarkup := currentWeather(city, userData.ForecastType)
+	cityJson, _ := json.Marshal(city)
+	cache.write("last_city"+strconv.Itoa(int(update.Chat().ID)), string(cityJson), time.Now().Unix()+60*10)
 	return sendMessage(ctx, update.Chat().ID, textMessage, replyMarkup)
 }
 

@@ -1,21 +1,18 @@
 package main
 
 import (
+	"context"
 	"flag"
-	"log"
-	"os"
-
-	"golang.org/x/net/context"
-
-	"time"
-
 	"github.com/bot-api/telegram"
 	"github.com/bot-api/telegram/telebot"
+	"log"
+	"os"
+	"time"
 )
 
 var dataStore *DataStore
 var weatherService *WeatherService
-var cacheService *Cache
+var cache *Cache
 var weatherIcons *WeatherIcons
 var debugAPI bool
 var err error
@@ -33,8 +30,8 @@ func main() {
 	}
 	dataStore = NewDataStore()
 	weatherIcons = NewWeatherIcons()
-	cacheService = NewCache()
-	weatherService = NewWeatherService(cacheService)
+	cache = NewCache()
+	weatherService = NewWeatherService(cache)
 
 	api := telegram.New(telegramKey)
 	api.Debug(debugAPI)

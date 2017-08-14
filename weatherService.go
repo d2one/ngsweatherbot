@@ -6,61 +6,65 @@ import (
 	"time"
 
 	"github.com/bot-api/telegram"
+	"log"
 )
 
 // WeatherService WeatherService
 type WeatherService struct {
-	cache         CacheService
-	weatherSource WeatherSource
+	cache CacheService
+	api   WeatherSource
 }
 
 // NewWeatherService WeatherService
 func NewWeatherService(cache CacheService) *WeatherService {
 	return &WeatherService{
-		cache:         cache,
-		weatherSource: NewWeatherAPI(),
+		cache: cache,
+		api:   NewWeatherAPI(),
 	}
 }
 
-func (wc *WeatherService) getCities(arg string) ([]*City, error) {
-	return wc.weatherSource.getCities(arg)
+func (service *WeatherService) getCities(arg string) ([]*City, error) {
+	return service.api.getCities(arg)
 }
 
-func (wc *WeatherService) getCity(arg string) (*City, error) {
-	return wc.weatherSource.getCity(arg)
+func (service *WeatherService) getCity(arg string) (*City, error) {
+	return service.api.getCity(arg)
 }
 
-func (wc *WeatherService) getCurrentWeather(arg string) (*CurrentWeather, error) {
-	if cachedCurrentWeather, _ := wc.cache.read("current_weather" + arg); cachedCurrentWeather != nil {
-		currentWeather := &CurrentWeather{}
+func (service *WeatherService) getCurrentWeather(cityTitle string) (*CurrentWeather, error) {
+	log.Println(cityTitle)
+	if cachedCurrentWeather, _ := service.cache.read("current_weather" + cityTitle); cachedCurrentWeather != nil {
+		var currentWeather CurrentWeather
 		json.Unmarshal([]byte(cachedCurrentWeather.CacheValue), &currentWeather)
-		return currentWeather, nil
+		return &currentWeather, nil
 	}
 
-	if currentWeather, _ := wc.weatherSource.getCurrentWeather(arg); currentWeather != nil {
+	if currentWeather, _ := service.api.getCurrentWeather(cityTitle); currentWeather != nil {
 		cacheValue, _ := json.Marshal(currentWeather)
-		wc.cache.write("current_weather"+arg, string(cacheValue), time.Now().Unix()+60*10)
+		service.cache.write("current_weather"+cityTitle, string(cacheValue), time.Now().Unix()+60*10)
+		log.Println(currentWeather)
 		return currentWeather, nil
 	}
+
 	return nil, nil
 }
 
-func (wc *WeatherService) getForecast(arg string) (*WeatherResponseForecasts, error) {
-	if cachedForecast, _ := wc.cache.read("forecast_weather" + arg); cachedForecast != nil {
-		forecast := &WeatherResponseForecasts{}
+func (service *WeatherService) getForecast(arg string) (*WeatherResponseForecasts, error) {
+	if cachedForecast, _ := service.cache.read("forecast_weather" + arg); cachedForecast != nil {
+		var forecast WeatherResponseForecasts
 		json.Unmarshal([]byte(cachedForecast.CacheValue), &forecast)
-		return forecast, nil
+		return &forecast, nil
 	}
 
-	if forecast, _ := wc.weatherSource.getForecast(arg); forecast != nil {
+	if forecast, _ := service.api.getForecast(arg); forecast != nil {
 		cacheValue, _ := json.Marshal(forecast)
-		wc.cache.write("forecast_weather"+arg, string(cacheValue), time.Now().Unix()+60*10)
+		service.cache.write("forecast_weather"+arg, string(cacheValue), time.Now().Unix()+60*10)
 		return forecast, nil
 	}
 	return nil, nil
 }
 
-func (wc *WeatherService) formatCurrentWeather(weather *CurrentWeather) (string, telegram.InlineKeyboardMarkup) {
+func (service *WeatherService) formatCurrentWeather(weather *CurrentWeather) (string, telegram.InlineKeyboardMarkup) {
 	var inlineKeyboard = [][]telegram.InlineKeyboardButton{}
 	messageText := fmt.Sprintf("%g °C, %s %g м/с, %s %s\n [pogoda.ngs.ru](https://pogoda.ngs.ru/%s)",
 		weather.Temperature,
@@ -86,7 +90,7 @@ func (wc *WeatherService) formatCurrentWeather(weather *CurrentWeather) (string,
 	return messageText, replyMarkup
 }
 
-func (wc *WeatherService) formatFullCurrentWeather(weather *CurrentWeather) (string, telegram.InlineKeyboardMarkup) {
+func (service *WeatherService) formatFullCurrentWeather(weather *CurrentWeather) (string, telegram.InlineKeyboardMarkup) {
 	var inlineKeyboard = [][]telegram.InlineKeyboardButton{}
 	// strings.Replace(weather.IconPath, "small", "big-icons", -1),
 	messageText := fmt.Sprintf(`*Температура:* %g°C, ощущается как  %g°C.
@@ -123,7 +127,7 @@ func (wc *WeatherService) formatFullCurrentWeather(weather *CurrentWeather) (str
 	return messageText, replyMarkup
 }
 
-func (wc *WeatherService) formatForecasttWeather(weather *WeatherResponseForecasts) string {
+func (service *WeatherService) formatForecastWeather(weather *WeatherResponseForecasts) string {
 	messageText := ""
 	t := time.Now()
 	h := t.Hour()
