@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -50,7 +49,7 @@ func currentCommand(ctx context.Context, arg string) error {
 	update := telebot.GetUpdate(ctx)
 	userData, err := dataStore.getUserData(update.From().ID)
 	if err != nil || !userData.CityAlias.Valid {
-		return sendMessage(ctx, update.Chat().ID, "Город не выбран. Выберете город в настройках.", nil)
+		return sendMessage(ctx, update.Chat().ID, "Город не выбран. Выберите город в настройках.", nil)
 	}
 	city := &City{
 		Alias: userData.CityAlias.String,
@@ -62,7 +61,7 @@ func currentCommand(ctx context.Context, arg string) error {
 
 func commandForecast(ctx context.Context, arg string) error {
 	update := telebot.GetUpdate(ctx)
-	textMessage := "Город не выбран. Выберете город в настройках."
+	textMessage := "Город не выбран. Выберите город в настройках."
 	userData, err := dataStore.getUserData(update.From().ID)
 	if err != nil || !userData.CityAlias.Valid {
 		return sendMessage(ctx, update.Chat().ID, textMessage, nil)
@@ -135,17 +134,22 @@ func cityCommand(ctx context.Context, arg string) error {
 	}
 
 	city := cities[0]
-	textMessage := "Город выбран: " + city.Title
+	textMessage := "Город выбран: *" + city.Title + "*"
 
 	if err := dataStore.saveUserCity(user.ID, city); err != nil {
-		textMessage = "Не удаолось выбрать город " + city.Title + ". Попробуйте позже."
+		textMessage = "Не удалось выбрать город *" + city.Title + "*. Попробуйте позже."
 	}
 	return sendMessage(ctx, update.Chat().ID, textMessage, getDefaultKeyboard())
 }
 
 func helpCommand(ctx context.Context, arg string) error {
 	update := telebot.GetUpdate(ctx)
-	return sendMessage(ctx, update.Chat().ID, "It's Ngs weather bot. \nIt can show you weather in city. To start messaging, you can send city name in your message.\nCommands:\n/city {cityName} - set your prefered city to show by /curent command\n/current - show's the weather in prefered city by /city command\n/forecast - show's forecast by prefered city/help", nil)
+	textMessage := "Привет. Я погодный бот. Я получаю данные с сайта pogoda.ngs.ru\n" +
+		"Я могу показывать погоду для городов, которые есть на сайте. \n" +
+		"Чтобы получить текущую погоду достаточно отправить мне название интересующего города.\n" +
+		"Чтобы не вводить постоянно город, можно сохранить город по умолчанию в настройках.\n" +
+		"Так же я могу присылать уведомления о погоде, в указанное в настройках время\n"
+	return sendMessage(ctx, update.Chat().ID, textMessage, nil)
 }
 
 func defaultCommand(ctx context.Context) error {
@@ -177,7 +181,7 @@ func defaultCommand(ctx context.Context) error {
 
 func buildInlineCityKeyboard(ctx context.Context, cities []*City, callback string) error {
 	update := telebot.GetUpdate(ctx)
-	msg := telegram.NewMessage(update.Chat().ID, "Пожалуйста, выберете город:")
+	msg := telegram.NewMessage(update.Chat().ID, "Пожалуйста, выберите город:")
 	var keyboardText = [][]telegram.InlineKeyboardButton{}
 	keyboardRow := []telegram.InlineKeyboardButton{}
 	for index, city := range cities {
@@ -188,7 +192,6 @@ func buildInlineCityKeyboard(ctx context.Context, cities []*City, callback strin
 				CallbackData: callback + city.Title,
 			},
 		)
-		log.Println(callback + city.Title)
 		if (index+1)%3 == 0 {
 			keyboardText = append(keyboardText, keyboardRow)
 			keyboardRow = []telegram.InlineKeyboardButton{}
@@ -234,7 +237,6 @@ func currentWeather(city *City, forecastType string) (string, telegram.InlineKey
 	var replyMarkup telegram.InlineKeyboardMarkup
 	var textMessage string
 	if currentWeather, err := weatherService.getCurrentWeather(city.Alias); err == nil {
-		log.Println(currentWeather)
 		if forecastType == "full" {
 			textMessage, replyMarkup = weatherService.formatFullCurrentWeather(currentWeather)
 		} else {
