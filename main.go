@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"github.com/bot-api/telegram"
 	"github.com/bot-api/telegram/telebot"
 	"log"
@@ -19,15 +18,14 @@ var err error
 
 func main() {
 	var telegramKey string
-
-	//TODO rebuild on env params
-	flag.StringVar(&telegramKey, "k", "", "secret telegram api key")
-	flag.BoolVar(&debugAPI, "d", false, "enable api debug mode")
-	flag.Parse()
-	if telegramKey == "" {
-		log.Println("Secret telegram key not setted")
-		os.Exit(1)
+	telegramKey = os.Getenv("NGS_WEATHER_BOT_TELEGRAM_KEY")
+	if debugAPIStatus := os.Getenv("NGS_WEATHER_BOT_DEBUG"); debugAPIStatus == "true" {
+		debugAPI = true
 	}
+	if telegramKey == "" {
+		panic("Empty telegram API KEY")
+	}
+
 	dataStore = NewDataStore()
 	weatherIcons = NewWeatherIcons()
 	cache = NewCache()
