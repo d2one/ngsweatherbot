@@ -66,7 +66,7 @@ func (service *WeatherService) getForecast(arg string) (*WeatherResponseForecast
 
 func (service *WeatherService) formatCurrentWeather(weather *CurrentWeather) (string, telegram.InlineKeyboardMarkup) {
 	var inlineKeyboard = [][]telegram.InlineKeyboardButton{}
-	messageText := fmt.Sprintf("%g °C, %s %g м/с, %s %s\n [pogoda.ngs.ru](https://pogoda.ngs.ru/%s)",
+	messageText := fmt.Sprintf("%g °C, %s %g м/с, %s %s\n [источник](https://pogoda.ngs.ru/%s)",
 		weather.Temperature,
 		weatherIcons.getWind(weather.Wind.Direction.Value),
 		weather.Wind.Speed,

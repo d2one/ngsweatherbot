@@ -72,11 +72,11 @@ type WeatherCities struct {
 // CurrentWeather current weather
 type CurrentWeather struct {
 	Astronomy struct {
-		LengthDayHuman  string `json:"length_day_human"`
-		MoonIlluminated int    `json:"moon_illuminated"`
-		MoonPhase       string `json:"moon_phase"`
-		Sunrise         string `json:"sunrise"`
-		Sunset          string `json:"sunset"`
+		LengthDayHuman  string  `json:"length_day_human"`
+		MoonIlluminated float64 `json:"moon_illuminated"`
+		MoonPhase       string  `json:"moon_phase"`
+		Sunrise         string  `json:"sunrise"`
+		Sunset          string  `json:"sunset"`
 	} `json:"astronomy"`
 	MagneticStatus      string  `json:"magnetic_status"`
 	FeelLikeTemperature float64 `json:"feel_like_temperature"`
@@ -98,9 +98,9 @@ type CurrentWeather struct {
 	} `json:"wind"`
 	Water []struct {
 		Level struct {
-			Hint  string `json:"hint"`
-			Trend int    `json:"trend"`
-			Value int    `json:"value"`
+			Hint  string  `json:"hint"`
+			Trend float64 `json:"trend"`
+			Value float64 `json:"value"`
 		} `json:"level"`
 		Temperature interface{} `json:"temperature"`
 		Title       string      `json:"title"`

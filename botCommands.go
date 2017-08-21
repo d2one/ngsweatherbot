@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"github.com/bot-api/telegram"
 	"github.com/bot-api/telegram/telebot"
+	"log"
 )
 
 func startCommand(ctx context.Context, arg string) error {
@@ -46,6 +47,8 @@ func settingsCommand(ctx context.Context, arg string) error {
 }
 
 func currentCommand(ctx context.Context, arg string) error {
+	log.Println("currwnt")
+	log.Println(arg)
 	update := telebot.GetUpdate(ctx)
 	userData, err := dataStore.getUserData(update.From().ID)
 	if err != nil || !userData.CityAlias.Valid {
@@ -211,14 +214,32 @@ func buildInlineCityKeyboard(ctx context.Context, cities []*City, callback strin
 func callbackWeatherType(ctx context.Context, forecastType string) error {
 	update := telebot.GetUpdate(ctx) // take update from context
 	dataStore.saveForecastType(update.Chat().ID, forecastType)
+	var usrLastMsg int64
+	if userLastMsg, _ := cache.read("user_last_msg_id_" + strconv.Itoa(int(update.Chat().ID))); userLastMsg != nil {
+		usrLastMsg, _ = strconv.ParseInt(userLastMsg.CacheValue, 10, 64)
+	}
+	var city = &City{}
 	if cityData, _ := cache.read("last_city" + strconv.Itoa(int(update.Chat().ID))); cityData != nil {
-		var city = &City{}
 		json.Unmarshal([]byte(cityData.CacheValue), &city)
-		textMessage, replyMarkup := currentWeather(city, forecastType)
-		return sendMessage(ctx, update.Chat().ID, textMessage, replyMarkup)
+	} else {
+		userData, err := dataStore.getUserData(update.From().ID)
+		if err != nil || !userData.CityAlias.Valid {
+			return sendMessage(ctx, update.Chat().ID, "Город не выбран. Выберите город в настройках.", nil)
+		}
+		city.Title = userData.CityTitle.String
+		city.Alias = userData.CityAlias.String
+	}
+	textMessage, replyMarkup := currentWeather(city, forecastType)
+	msgCfg := telegram.NewEditMessageText(update.Chat().ID, usrLastMsg, textMessage)
+	msgCfg.ReplyMarkup = replyMarkup
+	msgCfg.ParseMode = "markdown"
+	msgCfg.DisableWebPagePreview = true
+	api := telebot.GetAPI(ctx) // take api from context
+	if _, err := api.Edit(ctx, msgCfg); err != nil {
+		return currentCommand(ctx, "")
 	}
 
-	return currentCommand(ctx, "")
+	return err
 }
 
 func sendMessage(ctx context.Context, userID int64, textMessage string, markup telegram.ReplyMarkup) error {
@@ -229,7 +250,8 @@ func sendMessage(ctx context.Context, userID int64, textMessage string, markup t
 	if markup != nil {
 		msg.ReplyMarkup = markup
 	}
-	_, err := api.Send(ctx, msg)
+	message, err := api.Send(ctx, msg)
+	cache.write("user_last_msg_id_"+strconv.Itoa(int(userID)), strconv.Itoa(int(message.MessageID)), time.Now().Unix()+60*10)
 	return err
 }
 
