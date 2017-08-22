@@ -19,14 +19,19 @@ var err error
 func main() {
 	var telegramKey string
 	telegramKey = os.Getenv("NGS_WEATHER_BOT_TELEGRAM_KEY")
-	if debugAPIStatus := os.Getenv("NGS_WEATHER_BOT_DEBUG"); debugAPIStatus == "true" {
-		debugAPI = true
-	}
 	if telegramKey == "" {
 		panic("Empty telegram API KEY")
 	}
+	if debugAPIStatus := os.Getenv("NGS_WEATHER_BOT_DEBUG"); debugAPIStatus == "true" {
+		debugAPI = true
+	}
 
-	dataStore = NewDataStore()
+	dbPath := os.Getenv("NGS_WEATHER_BOT_DB_PATH")
+	if dbPath == "" {
+		panic("Empty DB PATH")
+	}
+
+	dataStore = NewDataStore(dbPath)
 	weatherIcons = NewWeatherIcons()
 	cache = NewCache()
 	weatherService = NewWeatherService(cache)
