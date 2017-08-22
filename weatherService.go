@@ -66,7 +66,7 @@ func (service *WeatherService) getForecast(arg string) (*WeatherResponseForecast
 
 func (service *WeatherService) formatCurrentWeather(weather *CurrentWeather) (string, telegram.InlineKeyboardMarkup) {
 	var inlineKeyboard = [][]telegram.InlineKeyboardButton{}
-	messageText := fmt.Sprintf("%g °C, %s %g м/с, %s %s\n [источник](https://pogoda.ngs.ru/%s)",
+	messageText := fmt.Sprintf("%g °C, %s %g м/с, %s %s\n [Источник](https://pogoda.ngs.ru/%s)",
 		weather.Temperature,
 		weatherIcons.getWind(weather.Wind.Direction.Value),
 		weather.Wind.Speed,
@@ -94,7 +94,7 @@ func (service *WeatherService) formatFullCurrentWeather(weather *CurrentWeather)
 	var inlineKeyboard = [][]telegram.InlineKeyboardButton{}
 	messageText := fmt.Sprintf("*Температура:* %g°C, ощущается как  %g°C. \n"+
 		"*Ветер:* %s %g м/с. \n%s, %s. \n%s, %s - %s\n%s\n"+
-		"[источник](https://pogoda.ngs.ru/%s)",
+		"[Источник](https://pogoda.ngs.ru/%s)",
 		weather.Temperature,
 		weather.FeelLikeTemperature,
 		weather.Wind.Direction.Title,
@@ -159,7 +159,7 @@ func (service *WeatherService) formatForecastWeather(weather *WeatherResponseFor
 			}
 		}
 	}
-	messageText = messageText + fmt.Sprintf("\n[источник](https://pogoda.ngs.ru/%s)", cityAlias)
+	messageText = messageText + fmt.Sprintf("\n[Источник](https://pogoda.ngs.ru/%s)", cityAlias)
 	return messageText
 }
 
