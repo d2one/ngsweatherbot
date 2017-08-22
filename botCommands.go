@@ -1,18 +1,14 @@
 package main
 
 import (
-	"fmt"
-	"strings"
-	"time"
-
-	"golang.org/x/net/context"
-
-	"strconv"
-
 	"encoding/json"
+	"fmt"
 	"github.com/bot-api/telegram"
 	"github.com/bot-api/telegram/telebot"
-	"log"
+	"golang.org/x/net/context"
+	"strconv"
+	"strings"
+	"time"
 )
 
 func startCommand(ctx context.Context, arg string) error {
@@ -47,8 +43,6 @@ func settingsCommand(ctx context.Context, arg string) error {
 }
 
 func currentCommand(ctx context.Context, arg string) error {
-	log.Println("currwnt")
-	log.Println(arg)
 	update := telebot.GetUpdate(ctx)
 	userData, err := dataStore.getUserData(update.From().ID)
 	if err != nil || !userData.CityAlias.Valid {

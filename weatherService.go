@@ -3,10 +3,8 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"time"
-
 	"github.com/bot-api/telegram"
-	"log"
+	"time"
 )
 
 // WeatherService WeatherService
@@ -32,7 +30,6 @@ func (service *WeatherService) getCity(arg string) (*City, error) {
 }
 
 func (service *WeatherService) getCurrentWeather(cityTitle string) (*CurrentWeather, error) {
-	log.Println(cityTitle)
 	if cachedCurrentWeather, _ := service.cache.read("current_weather" + cityTitle); cachedCurrentWeather != nil {
 		var currentWeather CurrentWeather
 		json.Unmarshal([]byte(cachedCurrentWeather.CacheValue), &currentWeather)
@@ -42,7 +39,6 @@ func (service *WeatherService) getCurrentWeather(cityTitle string) (*CurrentWeat
 	if currentWeather, _ := service.api.getCurrentWeather(cityTitle); currentWeather != nil {
 		cacheValue, _ := json.Marshal(currentWeather)
 		service.cache.write("current_weather"+cityTitle, string(cacheValue), time.Now().Unix()+60*10)
-		log.Println(currentWeather)
 		return currentWeather, nil
 	}
 

@@ -15,7 +15,6 @@ type DataStore struct {
 
 // dasdas
 func NewDataStore(dbPath string) *DataStore {
-	log.Println(dbPath)
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		log.Println(err)
