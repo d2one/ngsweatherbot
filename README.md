@@ -1,3 +1,5 @@
+[![Build Status](https://scrutinizer-ci.com/g/d2one/ngsweatherbot/badges/build.png?b=master)](https://scrutinizer-ci.com/g/d2one/ngsweatherbot/build-status/master) [![Go Report Card](https://goreportcard.com/badge/github.com/d2one/ngsweatherbot)](https://goreportcard.com/report/github.com/d2one/ngsweatherbot)
+
 # ngsweatherbot
 
 - [x] ~~TODO кэширование ответов апи новостей, относительно прогноза на 10 минут~~ 

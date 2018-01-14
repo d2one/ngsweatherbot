@@ -1,8 +1,80 @@
 package main
 
 import (
+	"context"
 	"database/sql"
+	"log"
+	"time"
+
+	"github.com/bot-api/telegram"
+	"github.com/bot-api/telegram/telebot"
 )
+
+// WeatherBot ds
+type WeatherBot struct {
+	api            *telegram.API
+	Bot            *telebot.Bot
+	DataStore      *DataStore
+	Icons          *WeatherIcons
+	WeatherService *WeatherService
+	Debug          bool
+	ctx            context.Context
+}
+
+// NewWeatherBot dsds
+func NewWeatherBot(netCtx context.Context, telegramKey string, store *DataStore, service *WeatherService) *WeatherBot {
+	api := telegram.New(telegramKey)
+	bot := telebot.NewWithAPI(api)
+	bot.Use(telebot.Recover()) // recover if handler panic
+	bot.HandleFunc(defaultCommand)
+
+	weatherBot := &WeatherBot{
+		api:            api,
+		Bot:            bot,
+		DataStore:      store,
+		Icons:          NewWeatherIcons(),
+		WeatherService: service,
+		Debug:          false,
+		ctx:            netCtx,
+	}
+	return weatherBot
+}
+
+func (weatherBot WeatherBot) setDebug(enable bool) {
+	weatherBot.Debug = enable
+	weatherBot.api.Debug(enable)
+}
+
+//AddCommands ds
+func (weatherBot WeatherBot) AddCommands(commands map[string]telebot.CommandFunc) {
+	tCommands := make(map[string]telebot.Commander)
+	log.Println(commands)
+	for k, v := range commands {
+		tCommands[k] = telebot.CommandFunc(v)
+	}
+
+	weatherBot.Bot.Use(telebot.Commands(tCommands))
+}
+
+//AddCallbacks ds
+func (weatherBot WeatherBot) AddCallbacks(commands map[string]telebot.CallbackFunc) {
+	tCommands := make(map[string]telebot.InlineCallback)
+	for k, v := range commands {
+		tCommands[k] = telebot.CallbackFunc(v)
+	}
+	weatherBot.Bot.Use(telebot.Callbacks(tCommands))
+}
+
+func (weatherBot WeatherBot) start() {
+	log.Fatal(weatherBot.Bot.Serve(weatherBot.ctx))
+}
+
+func (weatherBot WeatherBot) startCron() {
+	for {
+		runNotificationTasks(weatherBot.ctx, weatherBot.api)
+		time.Sleep(time.Minute)
+	}
+}
 
 // UserCity user selected city
 type UserCity struct {
@@ -20,6 +92,7 @@ type WeatherSource interface {
 	getForecast(arg string) (*WeatherResponseForecasts, error)
 }
 
+// UserData ds
 type UserData struct {
 	ID                   int64
 	ChatID               int64
@@ -117,6 +190,7 @@ type WeatherResponse struct {
 	Forecasts []*CurrentWeather `json:"forecasts"`
 }
 
+// HourForecast ds
 type HourForecast struct {
 	Hour        int `json:"hour"`
 	Temperature struct {
@@ -141,6 +215,7 @@ type HourForecast struct {
 	} `json:"precipitation"`
 }
 
+// WeatherResponseForecasts ds
 type WeatherResponseForecasts struct {
 	Forecasts []struct {
 		Date  string          `json:"date"`

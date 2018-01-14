@@ -11,7 +11,7 @@ type Cache struct {
 	c *mCache.Cache
 }
 
-// Cache Cache
+// NewCache Cache Cache
 func NewCache() *Cache {
 	c := mCache.New(10*time.Minute, 15*time.Minute)
 	return &Cache{

@@ -25,6 +25,7 @@ func runNotificationTasks(ctx context.Context, api *telegram.API) error {
 		textMessage := userData.CityTitle.String + "\n" + weatherService.formatForecastWeather(forecast)
 		msg := telegram.NewMessage(userData.ChatID, textMessage)
 		msg.ParseMode = "markdown"
+		msg.DisableWebPagePreview = true
 		if _, err := api.Send(ctx, msg); err != nil {
 			logWork(err)
 		}

@@ -3,12 +3,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/bot-api/telegram"
-	"github.com/bot-api/telegram/telebot"
-	"golang.org/x/net/context"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/bot-api/telegram"
+	"github.com/bot-api/telegram/telebot"
+	"golang.org/x/net/context"
 )
 
 func startCommand(ctx context.Context, arg string) error {
@@ -157,7 +158,7 @@ func defaultCommand(ctx context.Context) error {
 
 	messageText := update.Message.Text
 
-	if err, isCommandRun := inProcessCommand(ctx, messageText); isCommandRun {
+	if isCommandRun, err := inProcessCommand(ctx, messageText); isCommandRun {
 		return err
 	}
 	cities, err := weatherService.getCities(messageText)
@@ -171,8 +172,8 @@ func defaultCommand(ctx context.Context) error {
 	city := cities[0]
 	userData, err := dataStore.getUserData(update.From().ID)
 	textMessage, replyMarkup := currentWeather(city, userData.ForecastType)
-	cityJson, _ := json.Marshal(city)
-	cache.write("last_city"+strconv.Itoa(int(update.Chat().ID)), string(cityJson), time.Now().Unix()+60*10)
+	cityJSON, _ := json.Marshal(city)
+	cache.write("last_city"+strconv.Itoa(int(update.Chat().ID)), string(cityJSON), time.Now().Unix()+60*10)
 	return sendMessage(ctx, update.Chat().ID, textMessage, replyMarkup)
 }
 
@@ -297,39 +298,39 @@ func buildKeyboard(menu []string, rows int, oneTimeKeyboard bool) telegram.Reply
 	}
 }
 
-func inProcessCommand(ctx context.Context, commandText string) (error, bool) {
+func inProcessCommand(ctx context.Context, commandText string) (bool, error) {
 	update := telebot.GetUpdate(ctx) // take update from context
 	switch commandText {
 	case weatherIcons.getButtons("current"):
-		return currentCommand(ctx, ""), true
+		return true, currentCommand(ctx, "")
 	case weatherIcons.getButtons("settings"):
-		return settingsCommand(ctx, ""), true
+		return true, settingsCommand(ctx, "")
 	case weatherIcons.getButtons("default_city"):
 		cache.write(strconv.Itoa(int(update.Chat().ID)), "default_city", time.Now().Unix()+60*10)
-		return sendMessage(ctx, update.Chat().ID, "Введите город по умолчанию:", nil), true
+		return true, sendMessage(ctx, update.Chat().ID, "Введите город по умолчанию:", nil)
 	case weatherIcons.getButtons("forecast"):
-		return commandForecast(ctx, ""), true
+		return true, commandForecast(ctx, "")
 	case weatherIcons.getButtons("notifications_set"):
 		cache.write(strconv.Itoa(int(update.Chat().ID)), "notification_user", time.Now().Unix()+60*10)
-		return sendMessage(ctx, update.Chat().ID, "Введите время", nil), true
+		return true, sendMessage(ctx, update.Chat().ID, "Введите время", nil)
 	case weatherIcons.getButtons("notifications_remove"):
 		dataStore.deleteUserNotification(update.Chat().ID)
-		return sendMessage(ctx, update.Chat().ID, "Уведомления отключены", getDefaultKeyboard()), true
+		return true, sendMessage(ctx, update.Chat().ID, "Уведомления отключены", getDefaultKeyboard())
 	case weatherIcons.getButtons("notifications"):
-		return commandNotifications(ctx, update.Chat().ID), true
+		return true, commandNotifications(ctx, update.Chat().ID)
 	case weatherIcons.getButtons("back"):
 		cache.delete(strconv.Itoa(int(update.Chat().ID)))
-		return startCommand(ctx, ""), true
+		return true, startCommand(ctx, "")
 	}
 
 	if lastCommand, _ := cache.read(strconv.Itoa(int(update.Chat().ID))); lastCommand != nil {
 		switch lastCommand.CacheValue {
 		case "default_city":
 			cache.delete(strconv.Itoa(int(update.Chat().ID)))
-			return cityCommand(ctx, update.Message.Text), true
+			return true, cityCommand(ctx, update.Message.Text)
 		case "notification_user":
-			return commandSetNotifications(ctx, update.Message.Text), true
+			return true, commandSetNotifications(ctx, update.Message.Text)
 		}
 	}
-	return nil, false
+	return false, nil
 }

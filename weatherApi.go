@@ -12,7 +12,7 @@ type WeatherAPI struct {
 	URL string
 }
 
-// dasdas
+// NewWeatherAPI dasdas
 func NewWeatherAPI() *WeatherAPI {
 	return &WeatherAPI{URL: "https://pogoda.ngs.ru"}
 }

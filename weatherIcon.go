@@ -1,10 +1,11 @@
 package main
 
+//WeatherIcons ds
 type WeatherIcons struct {
 	icons map[string]map[string]string
 }
 
-// WeatherIcons
+// NewWeatherIcons ds
 func NewWeatherIcons() *WeatherIcons {
 	icons := map[string]map[string]string{
 		"buttons": {

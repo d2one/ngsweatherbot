@@ -8,12 +8,12 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// db *DB
+// DataStore *DB
 type DataStore struct {
 	db *sql.DB
 }
 
-// dasdas
+// NewDataStore dasdas
 func NewDataStore(dbPath string) *DataStore {
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
